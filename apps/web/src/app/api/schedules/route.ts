@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
               professional: { id: professionalId, name: 'Google Agenda' },
             }));
 
-          finalSchedules = [...finalSchedules, ...externalEvents];
+          finalSchedules = [...finalSchedules, ...externalEvents] as any;
         } catch (err) {
           console.error('Falha ao listar eventos do Google Calendar:', err);
         }
