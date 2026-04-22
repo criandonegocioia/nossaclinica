@@ -411,7 +411,7 @@ export default function ConfiguracoesPage() {
                         className="btn btn-secondary"
                         onClick={async () => {
                            try {
-                             const res = await api.get('/api/integrations/google/connect');
+                             const res = await api.get('/integrations/google/connect');
                              if (res.data?.url) {
                                window.location.href = res.data.url;
                              }
