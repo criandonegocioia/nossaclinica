@@ -401,6 +401,19 @@ export default function ConfiguracoesPage() {
                         </label>
                      </div>
                   </div>
+                  <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--gray-200)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                     <div>
+                        <p style={{ fontWeight: 'var(--font-medium)', fontSize: 'var(--text-sm)', color: 'var(--gray-900)' }}>Autorização do Profissional</p>
+                        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>Cada profissional deve autorizar sua conta individual para sincronizar eventos.</p>
+                     </div>
+                     <button
+                        className="btn btn-secondary"
+                        onClick={() => window.location.href = '/api/integrations/google/connect'}
+                     >
+                        <Plug size={16} style={{ marginRight: 8 }} />
+                        Autorizar Google Agenda
+                     </button>
+                  </div>
                 </div>
 
                 {/* Google Drive */}

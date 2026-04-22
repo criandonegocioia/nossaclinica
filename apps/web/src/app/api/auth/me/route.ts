@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
       role: user.role.name,
       avatarUrl: user.avatarUrl,
       permissions: user.role.permissions.map((rp) => rp.permission.name),
+      hasGoogleSync: !!user.googleRefreshToken,
     });
   } catch (error) {
     console.error('Auth me error:', error);
