@@ -31,6 +31,7 @@ export default function ConfiguracoesPage() {
   const [activeTab, setActiveTab] = useState('clinic');
   const [localData, setLocalData] = useState<Record<string, unknown>>({});
   const [saved, setSaved] = useState(false);
+  const [googleConnected, setGoogleConnected] = useState(false);
 
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
@@ -39,6 +40,18 @@ export default function ConfiguracoesPage() {
   useEffect(() => {
     if (settings) setLocalData(settings as Record<string, unknown>);
   }, [settings]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab')) {
+        setActiveTab(params.get('tab') as string);
+      }
+      if (params.get('google_sync') === 'success') {
+        setGoogleConnected(true);
+      }
+    }
+  }, []);
 
   const handleChange = (section: string, key: string, value: unknown) => {
     setLocalData((prev) => ({
@@ -408,7 +421,8 @@ export default function ConfiguracoesPage() {
                         <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>Cada profissional deve autorizar sua conta individual para sincronizar eventos.</p>
                      </div>
                      <button
-                        className="btn btn-secondary"
+                        className={googleConnected ? "btn btn-primary" : "btn btn-secondary"}
+                        style={googleConnected ? { backgroundColor: 'var(--success-500)', borderColor: 'var(--success-500)', color: 'white' } : {}}
                         onClick={async () => {
                            try {
                              const res = await api.get('/integrations/google/connect');
@@ -421,8 +435,8 @@ export default function ConfiguracoesPage() {
                            }
                         }}
                      >
-                        <Plug size={16} style={{ marginRight: 8 }} />
-                        Autorizar Google Agenda
+                        {googleConnected ? <CheckCircle size={16} style={{ marginRight: 8 }} /> : <Plug size={16} style={{ marginRight: 8 }} />}
+                        {googleConnected ? 'Google Agenda Conectado' : 'Autorizar Google Agenda'}
                      </button>
                   </div>
                 </div>
