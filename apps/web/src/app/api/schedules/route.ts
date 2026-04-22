@@ -41,44 +41,50 @@ export async function GET(request: NextRequest) {
 
     let finalSchedules = [...schedules];
 
-    // Fetch Google Calendar events if filtered by professional
-    if (professionalId && (startDate || endDate)) {
-      const professional = await prisma.user.findUnique({ where: { id: professionalId }, select: { googleRefreshToken: true } });
-      if (professional?.googleRefreshToken) {
-        try {
-          const start = startDate ? new Date(startDate) : new Date();
-          const end = endDate ? new Date(endDate) : new Date(new Date().setMonth(new Date().getMonth() + 1));
-          
-          const googleEvents = await listGoogleEvents(professionalId, start, end);
-          
-          // Filter out events that are already synced (have a corresponding schedule in DB)
-          const syncedGoogleIds = new Set(schedules.map(s => s.googleEventId).filter(Boolean));
-          
-          const externalEvents = googleEvents
-            .filter((ge: any) => !syncedGoogleIds.has(ge.id))
-            .map((ge: any) => ({
-              id: `google-${ge.id}`,
-              patientId: null,
-              professionalId,
-              roomId: null,
-              procedureId: null,
-              startAt: new Date(ge.start?.dateTime || ge.start?.date),
-              endAt: new Date(ge.end?.dateTime || ge.end?.date),
-              status: ScheduleStatus.BLOQUEIO, // Treats external events as blocks
-              colorCode: ge.colorId ? undefined : '#6b7280', // Grey if no color
-              notes: ge.description,
-              isBlock: true,
-              googleEventId: ge.id,
-              patient: null,
-              room: null,
-              procedure: { name: ge.summary || 'Evento Externo', colorCode: '#6b7280' },
-              professional: { id: professionalId, name: 'Google Agenda' },
-            }));
+    // Fetch Google Calendar events
+    const start = startDate ? new Date(startDate) : new Date(new Date().setHours(0,0,0,0));
+    const end = endDate ? new Date(endDate) : new Date(new Date().setMonth(new Date().getMonth() + 1));
+    
+    let professionalsToFetch: { id: string; googleRefreshToken: string | null; name: string }[] = [];
+    if (professionalId) {
+      const p = await prisma.user.findUnique({ where: { id: professionalId }, select: { id: true, googleRefreshToken: true, name: true } });
+      if (p?.googleRefreshToken) professionalsToFetch.push(p as any);
+    } else {
+      professionalsToFetch = await prisma.user.findMany({
+        where: { googleRefreshToken: { not: null } },
+        select: { id: true, googleRefreshToken: true, name: true }
+      }) as any;
+    }
 
-          finalSchedules = [...finalSchedules, ...externalEvents] as any;
-        } catch (err) {
-          console.error('Falha ao listar eventos do Google Calendar:', err);
-        }
+    const syncedGoogleIds = new Set(schedules.map(s => s.googleEventId).filter(Boolean));
+
+    for (const prof of professionalsToFetch) {
+      try {
+        const googleEvents = await listGoogleEvents(prof.id, start, end);
+        const externalEvents = googleEvents
+          .filter((ge: any) => !syncedGoogleIds.has(ge.id))
+          .map((ge: any) => ({
+            id: `google-${ge.id}`,
+            patientId: null,
+            professionalId: prof.id,
+            roomId: null,
+            procedureId: null,
+            startAt: new Date(ge.start?.dateTime || ge.start?.date),
+            endAt: new Date(ge.end?.dateTime || ge.end?.date),
+            status: ScheduleStatus.BLOQUEIO, // Treats external events as blocks
+            colorCode: ge.colorId ? undefined : '#6b7280', // Grey if no color
+            notes: ge.description,
+            isBlock: true,
+            googleEventId: ge.id,
+            patient: null,
+            room: null,
+            procedure: { name: ge.summary || 'Evento Externo', colorCode: '#6b7280' },
+            professional: { id: prof.id, name: prof.name || 'Google Agenda' },
+          }));
+
+        finalSchedules = [...finalSchedules, ...externalEvents] as any;
+      } catch (err) {
+        console.error(`Falha ao listar eventos do Google Calendar para ${prof.name}:`, err);
       }
     }
 

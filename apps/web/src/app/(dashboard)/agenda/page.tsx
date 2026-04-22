@@ -451,8 +451,14 @@ export default function AgendaPage() {
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
   const [newApptDefaults, setNewApptDefaults] = useState<{ time: string; room?: string; date?: string } | null>(null);
 
+  const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
+
   const queryClient = useQueryClient();
-  const { data: dbSchedules, isLoading } = useSchedules();
+  const { data: dbSchedules, isLoading } = useSchedules({
+    startDate: startOfMonth.toISOString(),
+    endDate: endOfMonth.toISOString(),
+  });
   const { data: dbRooms } = useRooms();
   const roomsList = dbRooms?.map((r: any) => r.name) || ['Sala 1'];
 
