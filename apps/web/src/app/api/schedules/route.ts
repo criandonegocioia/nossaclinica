@@ -4,6 +4,8 @@ import { requireAuth } from '@/lib/auth';
 import { Prisma, ScheduleStatus } from '@prisma/client';
 import { createGoogleEvent, listGoogleEvents } from '@/lib/google-calendar';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuth(request);

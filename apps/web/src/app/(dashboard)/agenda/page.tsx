@@ -473,7 +473,7 @@ export default function AgendaPage() {
       date: localD.toISOString().split('T')[0],
       time: d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       duration,
-      room: s.room?.name || 'Sala 1',
+      room: s.room?.name || roomsList[0],
       status: s.status === 'AGENDADO' || s.status === 'BLOQUEIO' ? 'SCHEDULED' : s.status === 'CONFIRMADO' ? 'CONFIRMED' : s.status === 'EM_ATENDIMENTO' ? 'IN_PROGRESS' : s.status === 'CONCLUIDO' ? 'COMPLETED' : 'CANCELLED',
       professional: s.professional?.name || '—',
     };
