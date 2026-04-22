@@ -1,0 +1,773 @@
+// =============================================
+// Prisma Schema — Clínica Odontológica e HOF
+// =============================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [pg_trgm]
+}
+
+// =============================================
+// Auth & RBAC
+// =============================================
+
+enum RoleName {
+  ADMIN
+  RECEPCAO
+  DENTISTA
+  HOF
+  FINANCEIRO
+  MARKETING
+  PACIENTE
+}
+
+model User {
+  id               String    @id @default(cuid())
+  name             String
+  email            String    @unique
+  passwordHash     String    @map("password_hash")
+  role             Role      @relation(fields: [roleId], references: [id])
+  roleId           String    @map("role_id")
+  active           Boolean   @default(true)
+  avatarUrl        String?   @map("avatar_url")
+  lastLoginAt      DateTime? @map("last_login_at")
+  twoFactorEnabled Boolean   @default(false) @map("two_factor_enabled")
+  twoFactorSecret  String?   @map("two_factor_secret")
+  refreshToken     String?   @map("refresh_token")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  medicalRecords  MedicalRecord[]
+  hofRecords      HofRecord[]
+  schedules       Schedule[]      @relation("ScheduleProfessional")
+  schedulesCreated Schedule[]     @relation("ScheduleCreator")
+  photos          Photo[]
+  auditLogs       AuditLog[]
+  anamneses       Anamnesis[]
+  treatmentPlans  TreatmentPlan[]
+  finances        Finance[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String     @id @default(cuid())
+  name        RoleName   @unique
+  description String?
+  users       User[]
+  permissions RolePermission[]
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId       String     @map("role_id")
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  permissionId String     @map("permission_id")
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// =============================================
+// Pacientes
+// =============================================
+
+enum PatientStatus {
+  ATIVO
+  INATIVO
+  ARQUIVADO
+}
+
+enum Gender {
+  MASCULINO
+  FEMININO
+  OUTRO
+  NAO_INFORMADO
+}
+
+enum MaritalStatus {
+  SOLTEIRO
+  CASADO
+  DIVORCIADO
+  VIUVO
+  UNIAO_ESTAVEL
+  NAO_INFORMADO
+}
+
+model Patient {
+  id                 String        @id @default(cuid())
+  name               String
+  cpf                String?       @unique
+  rg                 String?
+  birthDate          DateTime?     @map("birth_date")
+  gender             Gender        @default(NAO_INFORMADO)
+  maritalStatus      MaritalStatus @default(NAO_INFORMADO) @map("marital_status")
+  phoneMain          String?       @map("phone_main")
+  phoneSecondary     String?       @map("phone_secondary")
+  whatsapp           String?
+  email              String?
+  address            String?
+  city               String?
+  state              String?
+  zipCode            String?       @map("zip_code")
+  profession         String?
+  guardianName       String?       @map("guardian_name")
+  guardianPhone      String?       @map("guardian_phone")
+  origin             String?
+  healthInsurance    String?       @map("health_insurance")
+  observations       String?
+  avatarUrl          String?       @map("avatar_url")
+  status             PatientStatus @default(ATIVO)
+  googleDriveRootId  String?       @map("google_drive_root_id")
+  googleDriveFolders Json?         @map("google_drive_folders")
+  createdBy          String?       @map("created_by")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  anamneses       Anamnesis[]
+  medicalRecords  MedicalRecord[]
+  hofRecords      HofRecord[]
+  photos          Photo[]
+  documents       Document[]
+  schedules       Schedule[]
+  treatmentPlans  TreatmentPlan[]
+  odontogramEntries OdontogramEntry[]
+  finances        Finance[]
+
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@index([phoneMain])
+  @@map("patients")
+}
+
+// =============================================
+// Anamnese
+// =============================================
+
+enum AnamnesisStatus {
+  RASCUNHO
+  PREENCHIDA
+  ASSINADA
+}
+
+model Anamnesis {
+  id              String          @id @default(cuid())
+  patient         Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId       String          @map("patient_id")
+  professional    User            @relation(fields: [professionalId], references: [id])
+  professionalId  String          @map("professional_id")
+  filledAt        DateTime        @default(now()) @map("filled_at")
+  data            Json
+  signatureUrl    String?         @map("signature_url")
+  version         Int             @default(1)
+  status          AnamnesisStatus @default(RASCUNHO)
+  pdfUrl          String?         @map("pdf_url")
+  driveFileId     String?         @map("drive_file_id")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  @@index([patientId, version])
+  @@map("anamneses")
+}
+
+// =============================================
+// Prontuário (Atendimento / Medical Records)
+// =============================================
+
+model MedicalRecord {
+  id                    String   @id @default(cuid())
+  patient               Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId             String   @map("patient_id")
+  professional          User     @relation(fields: [professionalId], references: [id])
+  professionalId        String   @map("professional_id")
+  schedule              Schedule? @relation(fields: [scheduleId], references: [id])
+  scheduleId            String?  @map("schedule_id")
+  dateTime              DateTime @default(now()) @map("date_time")
+  complaint             String?
+  diagnosis             String?
+  treatmentPlan         String?  @map("treatment_plan")
+  procedures            String?
+  prescriptions         String?
+  orientations          String?
+  complications         String?
+  attachments           Json?
+  professionalSignature String?  @map("professional_signature")
+  isDraft               Boolean  @default(true) @map("is_draft")
+  previousVersionId     String?  @map("previous_version_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  // Note: NO updatedAt — records are immutable once finalized
+  photos Photo[]
+
+  @@index([patientId, createdAt])
+  @@map("medical_records")
+}
+
+// =============================================
+// Harmonização Orofacial (HOF)
+// =============================================
+
+model HofRecord {
+  id               String   @id @default(cuid())
+  patient          Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId        String   @map("patient_id")
+  professional     User     @relation(fields: [professionalId], references: [id])
+  professionalId   String   @map("professional_id")
+  schedule         Schedule? @relation(fields: [scheduleId], references: [id])
+  scheduleId       String?  @map("schedule_id")
+  dateTime         DateTime @default(now()) @map("date_time")
+  treatedRegions   Json?    @map("treated_regions")
+  products         Json?    // Array of { brand, manufacturer, batch, expiryDate, quantity, injectionPoints }
+  technique        String?
+  complications    String?
+  recommendations  String?
+  scheduledReturn  DateTime? @map("scheduled_return")
+  photos           Json?
+  consentSignedUrl String?  @map("consent_signed_url")
+  consentPdfUrl    String?  @map("consent_pdf_url")
+  driveFileId      String?  @map("drive_file_id")
+  isDraft          Boolean  @default(true) @map("is_draft")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([patientId, createdAt])
+  @@map("hof_records")
+}
+
+// =============================================
+// Procedimentos
+// =============================================
+
+enum ProcedureCategory {
+  ODONTOLOGIA
+  HOF
+  AMBOS
+}
+
+model Procedure {
+  id              String            @id @default(cuid())
+  code            String?           @unique
+  name            String
+  durationDefault Int               @default(30) @map("duration_default")
+  priceDefault    Decimal?          @map("price_default") @db.Decimal(10, 2)
+  category        ProcedureCategory @default(ODONTOLOGIA)
+  colorCode       String?           @map("color_code")
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  schedules         Schedule[]
+  odontogramEntries OdontogramEntry[]
+  photos            Photo[]
+
+  @@map("procedures")
+}
+
+// =============================================
+// Fotos
+// =============================================
+
+enum PhotoCategory {
+  ANTES
+  DURANTE
+  DEPOIS
+  EXAME
+  OUTRO
+}
+
+model Photo {
+  id              String        @id @default(cuid())
+  patient         Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId       String        @map("patient_id")
+  uploader        User          @relation(fields: [uploaderId], references: [id])
+  uploaderId      String        @map("uploader_id")
+  medicalRecord   MedicalRecord? @relation(fields: [medicalRecordId], references: [id])
+  medicalRecordId String?       @map("medical_record_id")
+  procedure       Procedure?    @relation(fields: [procedureId], references: [id])
+  procedureId     String?       @map("procedure_id")
+  category        PhotoCategory @default(OUTRO)
+  fileName        String        @map("file_name")
+  fileSize        Int?          @map("file_size")
+  mimeType        String?       @map("mime_type")
+  driveFileId     String?       @map("drive_file_id")
+  driveLink       String?       @map("drive_link")
+  thumbnailUrl    String?       @map("thumbnail_url")
+  localPath       String?       @map("local_path")
+  metadata        Json?
+  quarantinedAt   DateTime?     @map("quarantined_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  @@index([patientId, createdAt])
+  @@map("photos")
+}
+
+// =============================================
+// Documentos
+// =============================================
+
+model DocumentTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  type      String
+  content   String   @db.Text
+  variables Json?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  documents Document[]
+
+  @@map("document_templates")
+}
+
+model Document {
+  id                       String           @id @default(cuid())
+  patient                  Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId                String           @map("patient_id")
+  template                 DocumentTemplate? @relation(fields: [templateId], references: [id])
+  templateId               String?          @map("template_id")
+  type                     String
+  title                    String?
+  content                  String?          @db.Text
+  fileUrl                  String?          @map("file_url")
+  driveFileId              String?          @map("drive_file_id")
+  patientSignatureUrl      String?          @map("patient_signature_url")
+  professionalSignatureUrl String?          @map("professional_signature_url")
+  hash                     String?
+  version                  Int              @default(1)
+  createdAt                DateTime         @default(now()) @map("created_at")
+  updatedAt                DateTime         @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("documents")
+}
+
+// =============================================
+// Plano de Tratamento
+// =============================================
+
+model TreatmentPlan {
+  id              String   @id @default(cuid())
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId       String   @map("patient_id")
+  professional    User     @relation(fields: [professionalId], references: [id])
+  professionalId  String   @map("professional_id")
+  title           String?
+  stages          Json     // Array of { sequence, procedureId, status, scheduledDate, value }
+  totalValue      Decimal? @map("total_value") @db.Decimal(10, 2)
+  approved        Boolean  @default(false)
+  signatureUrl    String?  @map("signature_url")
+  approvedAt      DateTime? @map("approved_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  finances Finance[]
+
+  @@index([patientId])
+  @@map("treatment_plans")
+}
+
+// =============================================
+// Odontograma
+// =============================================
+
+model OdontogramEntry {
+  id          String    @id @default(cuid())
+  patient     Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId   String    @map("patient_id")
+  toothNumber Int       @map("tooth_number")
+  procedure   Procedure? @relation(fields: [procedureId], references: [id])
+  procedureId String?   @map("procedure_id")
+  surface     String?
+  description String?
+  status      String?
+  createdBy   String    @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([patientId])
+  @@map("odontogram_entries")
+}
+
+// =============================================
+// Agenda (Scheduling)
+// =============================================
+
+enum ScheduleStatus {
+  AGENDADO
+  CONFIRMADO
+  EM_ATENDIMENTO
+  CONCLUIDO
+  CANCELADO
+  FALTOU
+  BLOQUEIO
+}
+
+model Room {
+  id        String   @id @default(cuid())
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  schedules Schedule[]
+
+  @@map("rooms")
+}
+
+model Schedule {
+  id              String         @id @default(cuid())
+  patient         Patient?       @relation(fields: [patientId], references: [id])
+  patientId       String?        @map("patient_id")
+  professional    User           @relation("ScheduleProfessional", fields: [professionalId], references: [id])
+  professionalId  String         @map("professional_id")
+  room            Room?          @relation(fields: [roomId], references: [id])
+  roomId          String?        @map("room_id")
+  procedure       Procedure?     @relation(fields: [procedureId], references: [id])
+  procedureId     String?        @map("procedure_id")
+  startAt         DateTime       @map("start_at")
+  endAt           DateTime       @map("end_at")
+  status          ScheduleStatus @default(AGENDADO)
+  colorCode       String?        @map("color_code")
+  notes           String?
+  isBlock         Boolean        @default(false) @map("is_block")
+  confirmedAt     DateTime?      @map("confirmed_at")
+  confirmedVia    String?        @map("confirmed_via")
+  createdBy       User           @relation("ScheduleCreator", fields: [createdById], references: [id])
+  createdById     String         @map("created_by_id")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  medicalRecords MedicalRecord[]
+  hofRecords     HofRecord[]
+
+  @@index([professionalId, startAt])
+  @@index([roomId, startAt])
+  @@index([patientId])
+  @@map("schedules")
+}
+
+// =============================================
+// Financeiro
+// =============================================
+
+enum FinanceStatus {
+  PENDENTE
+  PAGO
+  ATRASADO
+  CANCELADO
+  ESTORNADO
+}
+
+enum PaymentMethod {
+  DINHEIRO
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  PIX
+  TRANSFERENCIA
+  BOLETO
+  CONVENIO
+  OUTRO
+}
+
+model Finance {
+  id              String        @id @default(cuid())
+  patient         Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId       String        @map("patient_id")
+  treatmentPlan   TreatmentPlan? @relation(fields: [treatmentPlanId], references: [id])
+  treatmentPlanId String?       @map("treatment_plan_id")
+  description     String?
+  amount          Decimal       @db.Decimal(10, 2)
+  status          FinanceStatus @default(PENDENTE)
+  dueDate         DateTime?     @map("due_date")
+  paidAt          DateTime?     @map("paid_at")
+  paymentMethod   PaymentMethod? @map("payment_method")
+  installment     Int?
+  totalInstallments Int?        @map("total_installments")
+  receiptUrl      String?       @map("receipt_url")
+  receiptHash     String?       @map("receipt_hash")
+  paidBy          User?         @relation(fields: [paidById], references: [id])
+  paidById        String?       @map("paid_by_id")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@index([status, dueDate])
+  @@map("finances")
+}
+
+// =============================================
+// Logs de Auditoria
+// =============================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  action     String
+  oldValue   Json?    @map("old_value")
+  newValue   Json?    @map("new_value")
+  user       User?    @relation(fields: [userId], references: [id])
+  userId     String?  @map("user_id")
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Audit logs are immutable — no updatedAt
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// =============================================
+// Integrações
+// =============================================
+
+model Integration {
+  id         String   @id @default(cuid())
+  provider   String
+  config     Json?
+  status     String   @default("inactive")
+  lastSyncAt DateTime? @map("last_sync_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([provider])
+  @@map("integrations")
+}
+
+// =============================================
+// Controle de Estoque
+// =============================================
+
+enum ProductCategory {
+  TOXINA_BOTULINICA
+  ACIDO_HIALURONICO
+  BIOESTIMULADOR
+  FIO_PDO
+  ANESTESICO
+  MATERIAL_ODONTOLOGICO
+  DESCARTAVEL
+  MEDICAMENTO
+  OUTRO
+}
+
+enum BatchStatus {
+  ACTIVE
+  EXPIRING
+  EXPIRED
+  DEPLETED
+}
+
+enum MovementType {
+  ENTRY
+  EXIT
+  ADJUSTMENT
+  EXPIRED
+  RETURN
+}
+
+model Product {
+  id          String          @id @default(cuid())
+  name        String
+  brand       String
+  category    ProductCategory
+  unit        String
+  minStock    Int             @default(5)  @map("min_stock")
+  supplier    String?
+  notes       String?
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt     @map("updated_at")
+  batches     Batch[]
+  movements   StockMovement[]
+
+  @@index([category])
+  @@map("products")
+}
+
+model Batch {
+  id            String      @id @default(cuid())
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId     String      @map("product_id")
+  batchNumber   String      @map("batch_number")
+  expiresAt     DateTime    @map("expires_at")
+  quantity      Int
+  initialQty    Int         @map("initial_qty")
+  purchaseDate  DateTime?   @map("purchase_date")
+  unitCost      Decimal?    @db.Decimal(10, 2) @map("unit_cost")
+  status        BatchStatus @default(ACTIVE)
+  movements     StockMovement[]
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([expiresAt])
+  @@map("batches")
+}
+
+model StockMovement {
+  id            String       @id @default(cuid())
+  product       Product      @relation(fields: [productId], references: [id])
+  productId     String       @map("product_id")
+  batch         Batch?       @relation(fields: [batchId], references: [id])
+  batchId       String?      @map("batch_id")
+  type          MovementType
+  quantity      Int
+  reason        String?
+  patientId     String?      @map("patient_id")
+  hofRecordId   String?      @map("hof_record_id")
+  userId        String       @map("user_id")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@index([productId])
+  @@index([createdAt])
+  @@map("stock_movements")
+}
+
+// =============================================
+// Medicamentos
+// =============================================
+
+enum MedForm {
+  COMPRIMIDO
+  CAPSULA
+  LIQUIDO
+  INJETAVEL
+  POMADA
+  GEL
+  SPRAY
+}
+
+enum MedCategory {
+  ANTIBIOTICO
+  ANALGESICO
+  ANTI_INFLAMATORIO
+  ANESTESICO
+  ANTIFUNGICO
+  OUTRO
+}
+
+model Medication {
+  id                   String      @id @default(cuid())
+  name                 String
+  activeIngredient     String      @map("active_ingredient")
+  concentration        String?
+  form                 MedForm
+  route                String?
+  defaultDosage        String?     @map("default_dosage")
+  defaultInstructions  String?     @map("default_instructions")
+  contraindications    String?
+  interactions         String?
+  category             MedCategory
+  active               Boolean     @default(true)
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt     @map("updated_at")
+
+  @@index([category])
+  @@map("medications")
+}
+
+// =============================================
+// CRM / Funil de Vendas
+// =============================================
+
+enum LeadSource {
+  INSTAGRAM
+  WHATSAPP
+  SITE
+  INDICACAO
+  GOOGLE
+  FACEBOOK
+  EVENTO
+  OUTRO
+}
+
+enum FunnelStage {
+  LEAD
+  CONTACTED
+  SCHEDULED
+  EVALUATED
+  QUOTE_SENT
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+  LOYAL
+}
+
+enum ActivityType {
+  CALL
+  WHATSAPP
+  INSTAGRAM_DM
+  EMAIL
+  MEETING
+  NOTE
+}
+
+model Lead {
+  id          String      @id @default(cuid())
+  name        String
+  phone       String?
+  email       String?
+  instagram   String?
+  source      LeadSource
+  status      FunnelStage @default(LEAD)
+  interest    String?
+  notes       String?
+  assignedTo  String?     @map("assigned_to")
+  patientId   String?     @unique @map("patient_id")
+  value       Decimal?    @db.Decimal(10, 2)
+  activities  LeadActivity[]
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt     @map("updated_at")
+
+  @@index([status])
+  @@index([source])
+  @@map("leads")
+}
+
+model LeadActivity {
+  id        String       @id @default(cuid())
+  lead      Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId    String       @map("lead_id")
+  type      ActivityType
+  content   String
+  userId    String       @map("user_id")
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@index([leadId])
+  @@map("lead_activities")
+}
+
+// =============================================
+// Configurações da Clínica
+// =============================================
+
+model Settings {
+  id           String   @id @default(cuid())
+  key          String   @unique
+  value        Json
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
