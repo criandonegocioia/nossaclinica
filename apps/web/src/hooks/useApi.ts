@@ -138,18 +138,6 @@ export function useDashboardStats() {
   });
 }
 
-export function useCreateSchedule() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
-      const res = await api.post('/schedules', data);
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
-    },
-  });
-}
 
 export function useUpdateScheduleStatus(id: string) {
   const queryClient = useQueryClient();
