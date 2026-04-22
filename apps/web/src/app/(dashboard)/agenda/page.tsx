@@ -113,6 +113,20 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
     if (!form.roomId && dbRooms?.length > 0) update('roomId', dbRooms[0].id);
   }, [dbRooms, dbProcedures, dbProfessionals]);
 
+  useEffect(() => {
+    if (form.procedureId && dbProcedures) {
+      const proc = dbProcedures.find((p: any) => p.id === form.procedureId);
+      if (proc) {
+        const procName = proc.name.toLowerCase();
+        if (procName.includes('avaliação') || procName.includes('avaliacao')) {
+          update('duration', 120);
+        } else {
+          update('duration', 60);
+        }
+      }
+    }
+  }, [form.procedureId, dbProcedures]);
+
   const update = (field: string, value: string | number | boolean) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -303,7 +317,7 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
           <div style={{ display: 'contents' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-3)', gridColumn: '1 / -1' }}>
               <Field label="Data" required>
-                <input className="input" type="date" value={form.date} onChange={(e) => update('date', e.target.value)} />
+                <input className="input" type="date" min={new Date().toISOString().split('T')[0]} value={form.date} onChange={(e) => update('date', e.target.value)} />
               </Field>
               <Field label="Horário" required>
                 <select className="input" value={form.time} onChange={(e) => update('time', e.target.value)}>
@@ -311,7 +325,7 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
                 </select>
               </Field>
               <Field label="Duração">
-                <select className="input" value={form.duration} onChange={(e) => update('duration', parseInt(e.target.value))}>
+                <select className="input" disabled value={form.duration} onChange={(e) => update('duration', parseInt(e.target.value))}>
                   {DURATIONS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
                 </select>
               </Field>

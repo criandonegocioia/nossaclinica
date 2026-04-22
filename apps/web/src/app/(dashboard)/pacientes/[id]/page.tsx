@@ -777,6 +777,20 @@ function NewScheduleInline({ patientId, patientName, onDone }: { patientId: stri
   const create = useCreateSchedule();
   const set = (key: string, val: any) => setForm((f) => ({ ...f, [key]: val }));
 
+  useEffect(() => {
+    if (form.procedureId && procedures.length > 0) {
+      const proc = procedures.find((p: any) => p.id === form.procedureId);
+      if (proc) {
+        const procName = proc.name.toLowerCase();
+        if (procName.includes('avaliação') || procName.includes('avaliacao')) {
+          set('duration', 120);
+        } else {
+          set('duration', 60);
+        }
+      }
+    }
+  }, [form.procedureId, procedures]);
+
   const handleSave = async () => {
     if (!form.professionalId || !form.procedureId || !form.roomId) {
       alert('Selecione profissional, procedimento e sala.');
@@ -808,13 +822,13 @@ function NewScheduleInline({ patientId, patientName, onDone }: { patientId: stri
         <InlineFormHeader title="Novo Agendamento" onBack={onDone} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-4)' }}>
           <Field label="Data">
-            <input className="input" type="date" value={form.date} onChange={(e) => set('date', e.target.value)} />
+            <input className="input" type="date" min={new Date().toISOString().split('T')[0]} value={form.date} onChange={(e) => set('date', e.target.value)} />
           </Field>
           <Field label="Horário">
             <input className="input" type="time" value={form.time} onChange={(e) => set('time', e.target.value)} />
           </Field>
           <Field label="Duração (minutos)">
-            <select className="input" value={form.duration} onChange={(e) => set('duration', Number(e.target.value))}>
+            <select className="input" disabled value={form.duration} onChange={(e) => set('duration', Number(e.target.value))}>
               <option value={30}>30 min</option>
               <option value={45}>45 min</option>
               <option value={60}>1h</option>

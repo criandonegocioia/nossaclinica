@@ -22,6 +22,14 @@ export async function PATCH(
       return NextResponse.json({ message: 'Agendamento não encontrado' }, { status: 404 });
     }
 
+    if (schedule.startAt < new Date()) {
+      return NextResponse.json({ message: 'Não é possível alterar ou remarcar agendamentos que já ocorreram no passado.' }, { status: 403 });
+    }
+
+    if (startAt < new Date()) {
+      return NextResponse.json({ message: 'A nova data de agendamento não pode estar no passado.' }, { status: 400 });
+    }
+
     // Check conflicts
     const conflictWhere: Prisma.ScheduleWhereInput = {
       professionalId: schedule.professionalId,

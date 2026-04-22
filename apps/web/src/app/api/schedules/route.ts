@@ -107,7 +107,41 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json();
     const startAt = new Date(data.startAt);
-    const endAt = new Date(data.endAt);
+    let endAt = new Date(data.endAt);
+
+    // Rule 1: No scheduling in the past
+    if (startAt < new Date()) {
+      return NextResponse.json({ message: 'Não é possível criar agendamentos com data e hora no passado.' }, { status: 400 });
+    }
+
+    // Rule 2: Override durations based on procedure
+    let appendedNotes = data.notes || '';
+    let colorCode = undefined;
+
+    if (data.procedureId) {
+      const procedure = await prisma.procedure.findUnique({ where: { id: data.procedureId } });
+      if (procedure) {
+        colorCode = procedure.colorCode;
+        const procName = procedure.name.toLowerCase();
+        let hoursToAdd = 1;
+        
+        if (procName.includes('avaliação') || procName.includes('avaliacao')) {
+          hoursToAdd = 2;
+          appendedNotes += '\n\n[SISTEMA] Lembrete configurado: Enviar 1h antes.';
+        } else if (procName.includes('pós operatório') || procName.includes('pos operatorio')) {
+          hoursToAdd = 1;
+          appendedNotes += '\n\n[SISTEMA] Lembrete configurado: Enviar 2h antes.';
+        } else if (procName.includes('botox') || procName.includes('hof')) {
+          hoursToAdd = 1;
+          appendedNotes += '\n\n[SISTEMA] Lembrete configurado: Enviar 1h antes.';
+        } else {
+          hoursToAdd = 1; // Demais procedimentos
+        }
+        
+        // Force the duration
+        endAt = new Date(startAt.getTime() + hoursToAdd * 60 * 60 * 1000);
+      }
+    }
 
     // Check for conflicts
     const conflictWhere: Prisma.ScheduleWhereInput = {
@@ -168,10 +202,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const colorCode = data.procedureId
-      ? (await prisma.procedure.findUnique({ where: { id: data.procedureId } }))?.colorCode
-      : undefined;
-
     const schedule = await prisma.schedule.create({
       data: {
         patientId: data.patientId,
@@ -180,7 +210,7 @@ export async function POST(request: NextRequest) {
         procedureId: data.procedureId,
         startAt,
         endAt,
-        notes: data.notes,
+        notes: appendedNotes,
         isBlock: data.isBlock || false,
         createdById: authResult.user.sub,
         colorCode,
