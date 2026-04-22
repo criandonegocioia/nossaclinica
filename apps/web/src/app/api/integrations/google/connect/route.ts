@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       state: userId, // Pass user ID so callback knows who to update
     });
 
-    return NextResponse.redirect(authorizeUrl);
+    return NextResponse.json({ url: authorizeUrl });
   } catch (error) {
     console.error('Google Connect error:', error);
     return NextResponse.json({ message: 'Erro interno ao conectar com Google' }, { status: 500 });

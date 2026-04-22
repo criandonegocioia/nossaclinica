@@ -15,6 +15,7 @@ import {
   Plug,
 } from 'lucide-react';
 import { useSettings, useUpdateSettings } from '@/hooks/useApi';
+import api from '@/lib/api';
 
 const TABS = [
   { key: 'clinic',         title: 'Clínica',       icon: Building2 },
@@ -408,7 +409,17 @@ export default function ConfiguracoesPage() {
                      </div>
                      <button
                         className="btn btn-secondary"
-                        onClick={() => window.location.href = '/api/integrations/google/connect'}
+                        onClick={async () => {
+                           try {
+                             const res = await api.get('/api/integrations/google/connect');
+                             if (res.data?.url) {
+                               window.location.href = res.data.url;
+                             }
+                           } catch (err) {
+                             console.error(err);
+                             alert('Erro ao gerar link de autorização do Google.');
+                           }
+                        }}
                      >
                         <Plug size={16} style={{ marginRight: 8 }} />
                         Autorizar Google Agenda
