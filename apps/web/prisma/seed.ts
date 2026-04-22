@@ -1,5 +1,5 @@
 import { PrismaClient, RoleName } from '@prisma/client';
-import * as argon2 from 'argon2';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -132,7 +132,7 @@ async function main() {
   console.log('  Creating admin user...');
   const adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } });
   if (adminRole) {
-    const passwordHash = await argon2.hash('admin123');
+    const passwordHash = await bcrypt.hash('admin123', 10);
     await prisma.user.upsert({
       where: { email: 'admin@clinica.com' },
       update: {},
@@ -157,7 +157,7 @@ async function main() {
   for (const u of demoUsers) {
     const role = await prisma.role.findUnique({ where: { name: u.role } });
     if (role) {
-      const passwordHash = await argon2.hash('demo123');
+      const passwordHash = await bcrypt.hash('demo123', 10);
       await prisma.user.upsert({
         where: { email: u.email },
         update: {},

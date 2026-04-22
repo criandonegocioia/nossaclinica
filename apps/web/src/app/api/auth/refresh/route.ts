@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateTokens, JwtPayload } from '@/lib/auth';
-import * as argon2 from 'argon2';
+import * as bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Acesso negado' }, { status: 401 });
     }
 
-    const isValid = await argon2.verify(user.refreshToken, refreshToken);
+    const isValid = await bcrypt.compare(refreshToken, user.refreshToken);
     if (!isValid) {
       return NextResponse.json({ message: 'Token de refresh inválido' }, { status: 401 });
     }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     const tokens = await generateTokens(payload);
 
-    const refreshHash = await argon2.hash(tokens.refreshToken);
+    const refreshHash = await bcrypt.hash(tokens.refreshToken, 10);
     await prisma.user.update({
       where: { id: user.id },
       data: { refreshToken: refreshHash },
