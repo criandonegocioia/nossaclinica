@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) return authResult;
     // We get the user ID to pass it as state, so the callback knows who to update
-    const userId = authResult.id;
+    const userId = authResult.user.sub as string;
 
     // Fetch Google Calendar settings from database
     const settingsRow = await prisma.settings.findUnique({

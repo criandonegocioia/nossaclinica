@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 import { Prisma } from '@prisma/client';
+import { updateGoogleEvent } from '@/lib/google-calendar';
 
 export async function PATCH(
   request: NextRequest,
@@ -40,7 +41,20 @@ export async function PATCH(
     const updated = await prisma.schedule.update({
       where: { id },
       data: { startAt, endAt, status: 'AGENDADO' },
+      include: { professional: { select: { id: true, googleRefreshToken: true } } },
     });
+
+    if (updated.googleEventId && updated.professional.googleRefreshToken) {
+      try {
+        await updateGoogleEvent(updated.professionalId, updated.googleEventId, {
+          start: updated.startAt,
+          end: updated.endAt,
+          status: 'confirmed',
+        });
+      } catch (err) {
+        console.error('Falha ao atualizar Google Calendar no reschedule:', err);
+      }
+    }
 
     return NextResponse.json(updated);
   } catch (error) {

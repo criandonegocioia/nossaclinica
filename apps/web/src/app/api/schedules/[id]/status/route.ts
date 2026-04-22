@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 import { Prisma, ScheduleStatus } from '@prisma/client';
+import { deleteGoogleEvent, updateGoogleEvent } from '@/lib/google-calendar';
 
 export async function PATCH(
   request: NextRequest,
@@ -25,9 +26,21 @@ export async function PATCH(
       data,
       include: {
         patient: { select: { id: true, name: true } },
-        professional: { select: { id: true, name: true } },
+        professional: { select: { id: true, name: true, googleRefreshToken: true } },
       },
     });
+
+    if (schedule.googleEventId && schedule.professional.googleRefreshToken) {
+      if (status === 'CANCELADO' || status === 'FALTOU') {
+        await deleteGoogleEvent(schedule.professionalId, schedule.googleEventId);
+        // Optionally update the local db to nullify googleEventId
+        // await prisma.schedule.update({ where: { id }, data: { googleEventId: null } });
+      } else {
+        await updateGoogleEvent(schedule.professionalId, schedule.googleEventId, {
+          status: 'confirmed',
+        });
+      }
+    }
 
     return NextResponse.json(schedule);
   } catch (error) {

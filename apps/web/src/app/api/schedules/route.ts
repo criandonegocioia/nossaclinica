@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
 import { Prisma, ScheduleStatus } from '@prisma/client';
+import { createGoogleEvent, listGoogleEvents } from '@/lib/google-calendar';
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,13 +33,59 @@ export async function GET(request: NextRequest) {
       orderBy: { startAt: 'asc' },
       include: {
         patient: { select: { id: true, name: true, avatarUrl: true, phoneMain: true } },
-        professional: { select: { id: true, name: true, avatarUrl: true } },
+        professional: { select: { id: true, name: true, avatarUrl: true, googleRefreshToken: true } },
         room: { select: { id: true, name: true } },
         procedure: { select: { id: true, name: true, colorCode: true, durationDefault: true } },
       },
     });
 
-    return NextResponse.json(schedules);
+    let finalSchedules = [...schedules];
+
+    // Fetch Google Calendar events if filtered by professional
+    if (professionalId && (startDate || endDate)) {
+      const professional = await prisma.user.findUnique({ where: { id: professionalId }, select: { googleRefreshToken: true } });
+      if (professional?.googleRefreshToken) {
+        try {
+          const start = startDate ? new Date(startDate) : new Date();
+          const end = endDate ? new Date(endDate) : new Date(new Date().setMonth(new Date().getMonth() + 1));
+          
+          const googleEvents = await listGoogleEvents(professionalId, start, end);
+          
+          // Filter out events that are already synced (have a corresponding schedule in DB)
+          const syncedGoogleIds = new Set(schedules.map(s => s.googleEventId).filter(Boolean));
+          
+          const externalEvents = googleEvents
+            .filter((ge: any) => !syncedGoogleIds.has(ge.id))
+            .map((ge: any) => ({
+              id: `google-${ge.id}`,
+              patientId: null,
+              professionalId,
+              roomId: null,
+              procedureId: null,
+              startAt: new Date(ge.start?.dateTime || ge.start?.date),
+              endAt: new Date(ge.end?.dateTime || ge.end?.date),
+              status: ScheduleStatus.BLOQUEIO, // Treats external events as blocks
+              colorCode: ge.colorId ? undefined : '#6b7280', // Grey if no color
+              notes: ge.description,
+              isBlock: true,
+              googleEventId: ge.id,
+              patient: null,
+              room: null,
+              procedure: { name: ge.summary || 'Evento Externo', colorCode: '#6b7280' },
+              professional: { id: professionalId, name: 'Google Agenda' },
+            }));
+
+          finalSchedules = [...finalSchedules, ...externalEvents];
+        } catch (err) {
+          console.error('Falha ao listar eventos do Google Calendar:', err);
+        }
+      }
+    }
+
+    // Sort again just in case
+    finalSchedules.sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+
+    return NextResponse.json(finalSchedules);
   } catch (error) {
     console.error('Schedules GET error:', error);
     return NextResponse.json({ message: 'Erro interno' }, { status: 500 });
@@ -86,6 +133,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check external Google Calendar conflict
+    const professional = await prisma.user.findUnique({
+      where: { id: data.professionalId },
+      select: { googleRefreshToken: true }
+    });
+
+    if (professional?.googleRefreshToken) {
+      try {
+        const googleEvents = await listGoogleEvents(data.professionalId, startAt, endAt);
+        // Exclude events already in our DB (synced back)
+        const existingScheduleIds = await prisma.schedule.findMany({
+          where: { googleEventId: { not: null } },
+          select: { googleEventId: true }
+        });
+        const syncedIds = new Set(existingScheduleIds.map(s => s.googleEventId));
+        
+        const conflictingExternal = googleEvents.find((ge: any) => !syncedIds.has(ge.id));
+        if (conflictingExternal) {
+          return NextResponse.json({
+            message: 'Conflito de horário: profissional possui evento bloqueando no Google Agenda',
+          }, { status: 409 });
+        }
+      } catch (err) {
+        console.error('Falha ao verificar conflitos no Google Calendar:', err);
+      }
+    }
+
     const colorCode = data.procedureId
       ? (await prisma.procedure.findUnique({ where: { id: data.procedureId } }))?.colorCode
       : undefined;
@@ -105,11 +179,37 @@ export async function POST(request: NextRequest) {
       },
       include: {
         patient: { select: { id: true, name: true } },
-        professional: { select: { id: true, name: true } },
+        professional: { select: { id: true, name: true, googleRefreshToken: true } },
         room: { select: { id: true, name: true } },
         procedure: { select: { id: true, name: true, colorCode: true } },
       },
     });
+
+    // Try creating Google Calendar Event
+    if (schedule.professional.googleRefreshToken) {
+      try {
+        const title = schedule.isBlock 
+          ? `[Bloqueio] ${schedule.notes || 'Indisponível'}`
+          : `Consulta: ${schedule.patient?.name || 'Paciente'} - ${schedule.procedure?.name || 'Atendimento'}`;
+          
+        const googleEvent = await createGoogleEvent(schedule.professionalId, {
+          summary: title,
+          description: schedule.notes || '',
+          start: schedule.startAt,
+          end: schedule.endAt,
+          colorId: schedule.isBlock ? '8' : undefined, // 8 is grey in Google Calendar
+        });
+
+        if (googleEvent.id) {
+          await prisma.schedule.update({
+            where: { id: schedule.id },
+            data: { googleEventId: googleEvent.id }
+          });
+        }
+      } catch (err) {
+        console.error('Falha ao sincronizar com Google Calendar (POST):', err);
+      }
+    }
 
     return NextResponse.json(schedule, { status: 201 });
   } catch (error) {

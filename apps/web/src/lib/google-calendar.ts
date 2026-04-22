@@ -90,3 +90,68 @@ export async function createGoogleEvent(userId: string, eventData: {
     throw error;
   }
 }
+
+export async function updateGoogleEvent(userId: string, eventId: string, eventData: {
+  summary?: string;
+  description?: string;
+  start?: Date;
+  end?: Date;
+  colorId?: string;
+  status?: 'confirmed' | 'tentative' | 'cancelled';
+}) {
+  try {
+    const calendar = await getGoogleCalendarClient(userId);
+
+    const event: any = {};
+    if (eventData.summary) event.summary = eventData.summary;
+    if (eventData.description) event.description = eventData.description;
+    if (eventData.start) event.start = { dateTime: eventData.start.toISOString() };
+    if (eventData.end) event.end = { dateTime: eventData.end.toISOString() };
+    if (eventData.colorId) event.colorId = eventData.colorId;
+    if (eventData.status) event.status = eventData.status;
+
+    const res = await calendar.events.patch({
+      calendarId: 'primary',
+      eventId: eventId,
+      requestBody: event,
+    });
+
+    return res.data;
+  } catch (error) {
+    console.error('Failed to update Google Calendar event:', error);
+    // Let it fail gracefully if the event was already deleted externally
+  }
+}
+
+export async function deleteGoogleEvent(userId: string, eventId: string) {
+  try {
+    const calendar = await getGoogleCalendarClient(userId);
+
+    await calendar.events.delete({
+      calendarId: 'primary',
+      eventId: eventId,
+    });
+  } catch (error) {
+    console.error('Failed to delete Google Calendar event:', error);
+  }
+}
+
+export async function listGoogleEvents(userId: string, timeMin: Date, timeMax: Date) {
+  try {
+    const calendar = await getGoogleCalendarClient(userId);
+
+    const res = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin: timeMin.toISOString(),
+      timeMax: timeMax.toISOString(),
+      singleEvents: true,
+      orderBy: 'startTime',
+    });
+
+    return res.data.items || [];
+  } catch (error) {
+    console.error('Failed to list Google Calendar events:', error);
+    return [];
+  }
+}
+

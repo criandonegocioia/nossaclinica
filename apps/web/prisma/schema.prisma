@@ -451,6 +451,7 @@ model Schedule {
   colorCode       String?        @map("color_code")
   notes           String?
   isBlock         Boolean        @default(false) @map("is_block")
+  googleEventId   String?        @map("google_event_id")
   confirmedAt     DateTime?      @map("confirmed_at")
   confirmedVia    String?        @map("confirmed_via")
   createdBy       User           @relation("ScheduleCreator", fields: [createdById], references: [id])
