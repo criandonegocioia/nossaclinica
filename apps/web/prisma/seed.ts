@@ -135,7 +135,7 @@ async function main() {
     const passwordHash = await bcrypt.hash('admin123', 10);
     await prisma.user.upsert({
       where: { email: 'admin@clinica.com' },
-      update: {},
+      update: { passwordHash },
       create: {
         name: 'Administrador',
         email: 'admin@clinica.com',
@@ -149,8 +149,8 @@ async function main() {
   console.log('  Creating demo users...');
   const demoUsers = [
     { name: 'Maria Recepção', email: 'maria@clinica.com', role: 'RECEPCAO' as RoleName },
-    { name: 'Dr. João Silva', email: 'joao@clinica.com', role: 'DENTISTA' as RoleName },
-    { name: 'Dra. Ana Costa', email: 'ana@clinica.com', role: 'HOF' as RoleName },
+    { name: 'Dr. Felipe Coelho', email: 'felipe@clinica.com', role: 'DENTISTA' as RoleName },
+    { name: 'Dra. Maria de Lourdes', email: 'mariadelourdes@clinica.com', role: 'HOF' as RoleName },
     { name: 'Carlos Financeiro', email: 'carlos@clinica.com', role: 'FINANCEIRO' as RoleName },
   ];
 
@@ -160,7 +160,7 @@ async function main() {
       const passwordHash = await bcrypt.hash('demo123', 10);
       await prisma.user.upsert({
         where: { email: u.email },
-        update: {},
+        update: { passwordHash, name: u.name, roleId: role.id },
         create: { name: u.name, email: u.email, passwordHash, roleId: role.id },
       });
     }
