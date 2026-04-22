@@ -14,6 +14,7 @@ import {
   useUploadPhoto, useCreateFinance, useCreateSchedule, useCreateAnamnesis,
   usePatientPhotos, useFinances, useMedicalRecords, useCreateDocument,
   useSchedules, useDocuments, useAnamneses, useMedications,
+  useUsers, useRooms, useProcedures
 } from '@/hooks/useApi';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -757,26 +758,48 @@ function NewFinanceInline({ patientId, onDone }: { patientId: string; onDone: ()
 
 // ── New Schedule (inline) ──────────────────────────────────────────────────────
 function NewScheduleInline({ patientId, patientName, onDone }: { patientId: string; patientName: string; onDone: () => void }) {
+  const { data: dbProfessionalsRes } = useUsers({ role: ['DENTISTA', 'HOF'] } as any);
+  const professionals = dbProfessionalsRes?.data || [];
+  const { data: roomsRes } = useRooms();
+  const rooms = roomsRes?.data || [];
+  const { data: procsRes } = useProcedures();
+  const procedures = procsRes?.data || [];
+
   const [form, setForm] = useState({
-    startAt: '', endAt: '', notes: '', room: 'Sala 1', type: 'CONSULTA',
+    date: new Date().toISOString().split('T')[0],
+    time: '08:00',
+    duration: 60,
+    procedureId: '',
+    professionalId: '',
+    roomId: '',
+    notes: '',
   });
   const create = useCreateSchedule();
-  const set = (key: string, val: string) => setForm((f) => ({ ...f, [key]: val }));
+  const set = (key: string, val: any) => setForm((f) => ({ ...f, [key]: val }));
 
   const handleSave = async () => {
-    const start = new Date(form.startAt);
-    const end = form.endAt ? new Date(form.endAt) : new Date(start.getTime() + 30 * 60 * 1000); // 30 min default
-    await create.mutateAsync({
-      patientId,
-      patientName,
-      startAt: start.toISOString(),
-      endAt: end.toISOString(),
-      notes: form.notes,
-      room: form.room,
-      type: form.type,
-      status: 'AGENDADO',
-    });
-    onDone();
+    if (!form.professionalId || !form.procedureId || !form.roomId) {
+      alert('Selecione profissional, procedimento e sala.');
+      return;
+    }
+    const startAt = new Date(`${form.date}T${form.time}:00`);
+    const endAt = new Date(startAt.getTime() + form.duration * 60000);
+
+    try {
+      await create.mutateAsync({
+        patientId,
+        patientName,
+        professionalId: form.professionalId,
+        roomId: form.roomId,
+        procedureId: form.procedureId,
+        startAt: startAt.toISOString(),
+        endAt: endAt.toISOString(),
+        notes: form.notes,
+      });
+      onDone();
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Erro ao salvar agendamento.');
+    }
   };
 
   return (
@@ -784,24 +807,37 @@ function NewScheduleInline({ patientId, patientName, onDone }: { patientId: stri
       <div className="card-body">
         <InlineFormHeader title="Novo Agendamento" onBack={onDone} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-4)' }}>
-          <Field label="Início">
-            <input className="input" type="datetime-local" value={form.startAt} onChange={(e) => set('startAt', e.target.value)} />
+          <Field label="Data">
+            <input className="input" type="date" value={form.date} onChange={(e) => set('date', e.target.value)} />
           </Field>
-          <Field label="Fim (opcional)">
-            <input className="input" type="datetime-local" value={form.endAt} onChange={(e) => set('endAt', e.target.value)} />
+          <Field label="Horário">
+            <input className="input" type="time" value={form.time} onChange={(e) => set('time', e.target.value)} />
           </Field>
-          <Field label="Tipo">
-            <select className="input" value={form.type} onChange={(e) => set('type', e.target.value)}>
-              <option value="CONSULTA">Consulta</option>
-              <option value="RETORNO">Retorno</option>
-              <option value="AVALIACAO">Avaliação</option>
-              <option value="PROCEDIMENTO">Procedimento</option>
-              <option value="URGENCIA">Urgência</option>
+          <Field label="Duração (minutos)">
+            <select className="input" value={form.duration} onChange={(e) => set('duration', Number(e.target.value))}>
+              <option value={30}>30 min</option>
+              <option value={45}>45 min</option>
+              <option value={60}>1h</option>
+              <option value={90}>1h 30m</option>
+              <option value={120}>2h</option>
+            </select>
+          </Field>
+          <Field label="Profissional">
+            <select className="input" value={form.professionalId} onChange={(e) => set('professionalId', e.target.value)}>
+              <option value="">Selecione...</option>
+              {professionals.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Procedimento">
+            <select className="input" value={form.procedureId} onChange={(e) => set('procedureId', e.target.value)}>
+              <option value="">Selecione...</option>
+              {procedures.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </Field>
           <Field label="Sala">
-            <select className="input" value={form.room} onChange={(e) => set('room', e.target.value)}>
-              <option>Sala 1</option><option>Sala 2</option><option>Sala 3</option><option>Sala HOF</option>
+            <select className="input" value={form.roomId} onChange={(e) => set('roomId', e.target.value)}>
+              <option value="">Selecione...</option>
+              {rooms.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </Field>
           <Field label="Observações" span>
@@ -810,7 +846,7 @@ function NewScheduleInline({ patientId, patientName, onDone }: { patientId: stri
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-6)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--gray-100)' }}>
           <button className="btn btn-secondary" onClick={onDone}>Cancelar</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={create.isPending || !form.startAt}>
+          <button className="btn btn-primary" onClick={handleSave} disabled={create.isPending || !form.date || !form.professionalId || !form.roomId || !form.procedureId}>
             {create.isPending ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvando...</> : <><Calendar size={14} /> Criar Agendamento</>}
           </button>
         </div>
