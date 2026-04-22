@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
         colorCode,
       },
       include: {
-        patient: { select: { id: true, name: true } },
+        patient: { select: { id: true, name: true, phoneMain: true, email: true } },
         professional: { select: { id: true, name: true, googleRefreshToken: true } },
         room: { select: { id: true, name: true } },
         procedure: { select: { id: true, name: true, colorCode: true } },
@@ -190,11 +190,15 @@ export async function POST(request: NextRequest) {
       try {
         const title = schedule.isBlock 
           ? `[Bloqueio] ${schedule.notes || 'Indisponível'}`
-          : `Consulta: ${schedule.patient?.name || 'Paciente'} - ${schedule.procedure?.name || 'Atendimento'}`;
+          : `${schedule.procedure?.name || 'Consulta'} - ${schedule.patient?.name || 'Paciente'}`;
+          
+        const description = schedule.isBlock 
+          ? schedule.notes || '' 
+          : `Paciente: ${schedule.patient?.name || 'Paciente'}\nTelefone: ${schedule.patient?.phoneMain || 'Não informado'}\nMotivo: ${schedule.patient?.email || schedule.procedure?.name || 'Consulta'}\nAgendado por: OdontoFace`;
           
         const googleEvent = await createGoogleEvent(schedule.professionalId, {
           summary: title,
-          description: schedule.notes || '',
+          description: description,
           start: schedule.startAt,
           end: schedule.endAt,
           colorId: schedule.isBlock ? '8' : undefined, // 8 is grey in Google Calendar

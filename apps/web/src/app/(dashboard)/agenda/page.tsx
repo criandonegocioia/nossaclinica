@@ -17,29 +17,13 @@ import {
   Search,
   Mail,
 } from 'lucide-react';
-import { usePatients, useSchedules } from '@/hooks/useApi';
+import { usePatients, useSchedules, useCreateSchedule, useRooms, useProcedures, useUsers } from '@/hooks/useApi';
 import { api } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 // ── Constants ────────────────────────────────────────────────────────────────
 const HOURS = Array.from({ length: 12 }, (_, i) => `${(i + 8).toString().padStart(2, '0')}:00`);
-const ROOMS = ['Sala 1', 'Sala 2', 'Sala 3', 'Sala HOF'];
-
-const PROFESSIONALS = [
-  { id: '1', name: 'Dra. Ana Costa', specialty: 'HOF / Estética' },
-  { id: '2', name: 'Dr. João Silva', specialty: 'Odontologia Geral' },
-  { id: '3', name: 'Dra. Luísa Santos', specialty: 'Ortodontia' },
-];
-
-const PROCEDURES = [
-  'Consulta de Avaliação', 'Profilaxia', 'Restauração', 'Endodontia',
-  'Extração', 'Clareamento', 'Toxina Botulínica', 'Ácido Hialurônico',
-  'Bioestimulador', 'Fios de PDO', 'Retorno', 'Ortodontia - Manutenção',
-  'Cirurgia', 'Implante', 'Outro',
-];
-
 const DURATIONS = [
-  { value: 15, label: '15 min' }, { value: 30, label: '30 min' },
-  { value: 45, label: '45 min' }, { value: 60, label: '1h' },
+  { value: 60, label: '1h' },
   { value: 90, label: '1h30' }, { value: 120, label: '2h' },
 ];
 
@@ -106,17 +90,28 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const { data: dbRooms } = useRooms();
+  const { data: dbProcedures } = useProcedures();
+  const { data: dbProfessionals } = useUsers({ role: ['DENTISTA', 'HOF'] });
+  const createSchedule = useCreateSchedule();
+
   const [form, setForm] = useState({
-    procedure: params?.procedure || 'Consulta de Avaliação',
-    professional: params ? (PROFESSIONALS.find(p => p.name.includes(params.professional))?.id || PROFESSIONALS[0].id) : PROFESSIONALS[0].id,
+    procedureId: '',
+    professionalId: '',
     date: params?.date || defaultDate,
     time: params?.time || defaultTime || '09:00',
     duration: params?.duration || 60,
-    room: params?.room || defaultRoom || 'Sala 1',
+    roomId: '',
     notes: '',
     sendWhatsApp: true,
     sendEmail: false,
   });
+
+  useEffect(() => {
+    if (!form.procedureId && dbProcedures?.length > 0) update('procedureId', dbProcedures[0].id);
+    if (!form.professionalId && dbProfessionals?.length > 0) update('professionalId', dbProfessionals[0].id);
+    if (!form.roomId && dbRooms?.length > 0) update('roomId', dbRooms[0].id);
+  }, [dbRooms, dbProcedures, dbProfessionals]);
 
   const update = (field: string, value: string | number | boolean) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -146,24 +141,34 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
   const searchResults: { id: string; name: string; cpf?: string }[] = (patientsData as { data?: { id: string; name: string; cpf?: string }[] })?.data ?? [];
 
   const handleSave = async () => {
+    if (!selectedPatient) {
+      alert('Selecione um paciente!');
+      return;
+    }
+    
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    setSaving(false);
-    setSaved(true);
     
-    const result: Appointment = {
-      id: params ? params.id : Math.random().toString(36).substring(7),
-      patientName: selectedPatient?.name || '',
-      procedure: form.procedure,
-      date: form.date,
-      time: form.time,
-      duration: form.duration,
-      room: form.room,
-      status: params ? params.status : 'SCHEDULED',
-      professional: PROFESSIONALS.find(p => p.id === form.professional)?.name || form.professional,
-    };
-    
-    setTimeout(() => onDone(result), 1800);
+    try {
+      const startAt = new Date(`${form.date}T${form.time}:00`);
+      const endAt = new Date(startAt.getTime() + form.duration * 60000);
+
+      await createSchedule.mutateAsync({
+        patientId: selectedPatient.id,
+        professionalId: form.professionalId,
+        roomId: form.roomId,
+        procedureId: form.procedureId,
+        startAt: startAt.toISOString(),
+        endAt: endAt.toISOString(),
+        notes: form.notes,
+      });
+      
+      setSaved(true);
+      setTimeout(() => onDone(true as any), 1800);
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Erro ao salvar agendamento.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (saved) {
@@ -274,21 +279,21 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
           </div>
 
           <Field label="Procedimento" required>
-            <select className="input" value={form.procedure} onChange={(e) => update('procedure', e.target.value)}>
-              {PROCEDURES.map((p) => <option key={p} value={p}>{p}</option>)}
+            <select className="input" value={form.procedureId} onChange={(e) => update('procedureId', e.target.value)}>
+              {dbProcedures?.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </Field>
 
           {/* Professional */}
           <Field label="Profissional" required>
             <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              {PROFESSIONALS.map((prof) => (
+              {dbProfessionals?.map((prof: any) => (
                 <button key={prof.id}
-                  className={`btn btn-sm ${form.professional === prof.id ? 'btn-primary' : 'btn-ghost'}`}
-                  onClick={() => update('professional', prof.id)}
+                  className={`btn btn-sm ${form.professionalId === prof.id ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => update('professionalId', prof.id)}
                   style={{ flex: 1, flexDirection: 'column', padding: 'var(--space-2)', gap: 2, fontSize: '11px' }}>
                   <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{prof.name}</span>
-                  <span style={{ fontSize: '9px', opacity: 0.7 }}>{prof.specialty}</span>
+                  <span style={{ fontSize: '9px', opacity: 0.7 }}>{prof.role?.name || ''}</span>
                 </button>
               ))}
             </div>
@@ -316,10 +321,10 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
           {/* Room chips */}
           <Field label="Sala" required>
             <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
-              {ROOMS.map((room) => (
-                <button key={room}
-                  className={`btn btn-sm ${form.room === room ? 'btn-primary' : 'btn-ghost'}`}
-                  onClick={() => update('room', room)}>{room}</button>
+              {dbRooms?.map((room: any) => (
+                <button key={room.id}
+                  className={`btn btn-sm ${form.roomId === room.id ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => update('roomId', room.id)}>{room.name}</button>
               ))}
             </div>
           </Field>
@@ -448,6 +453,8 @@ export default function AgendaPage() {
 
   const queryClient = useQueryClient();
   const { data: dbSchedules, isLoading } = useSchedules();
+  const { data: dbRooms } = useRooms();
+  const roomsList = dbRooms?.map((r: any) => r.name) || ['Sala 1'];
 
   const appointments: Appointment[] = (dbSchedules || []).map((s: any) => {
     const d = new Date(s.startAt);
@@ -675,10 +682,10 @@ export default function AgendaPage() {
           {/* Day View Grid */}
           <div className="card">
             <div className="card-body" style={{ padding: 0, overflow: 'auto' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: `60px repeat(${calendarMode === 'day' ? ROOMS.length : weekDays.length}, 1fr)`, minWidth: 700 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `60px repeat(${calendarMode === 'day' ? roomsList.length : weekDays.length}, 1fr)`, minWidth: 700 }}>
                 {/* Header */}
                 <div style={{ borderBottom: '1px solid var(--gray-100)', padding: 'var(--space-3)', background: 'var(--gray-25)' }} />
-                {calendarMode === 'day' ? ROOMS.map((room) => (
+                {calendarMode === 'day' ? roomsList.map((room: string) => (
                   <div key={room} style={{
                     borderBottom: '1px solid var(--gray-100)', borderLeft: '1px solid var(--gray-100)',
                     padding: 'var(--space-3)', textAlign: 'center',
@@ -709,7 +716,7 @@ export default function AgendaPage() {
                     }}>
                       {hour}
                     </div>
-                    {calendarMode === 'day' ? ROOMS.map((room) => {
+                    {calendarMode === 'day' ? roomsList.map((room: string) => {
                       const colAppts = activeAppointments.filter((a) => a.room === room);
                       return renderColumn(hour, room, colAppts);
                     }) : weekDays.map((d) => {

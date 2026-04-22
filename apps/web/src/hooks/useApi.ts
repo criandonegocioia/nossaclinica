@@ -105,6 +105,19 @@ export function useSchedules(params: ScheduleParams = {}) {
   });
 }
 
+export function useCreateSchedule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await api.post('/schedules', data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+    },
+  });
+}
+
 export function useSchedulesToday() {
   return useQuery({
     queryKey: ['schedules', 'today'],
@@ -593,3 +606,42 @@ export function useCreateDocument() {
     },
   });
 }
+
+// =============================================
+// System Reference Hooks
+// =============================================
+
+export function useRooms() {
+  return useQuery({
+    queryKey: ['rooms'],
+    queryFn: async () => {
+      const res = await api.get('/rooms');
+      return res.data;
+    },
+  });
+}
+
+export function useProcedures() {
+  return useQuery({
+    queryKey: ['procedures'],
+    queryFn: async () => {
+      const res = await api.get('/procedures');
+      return res.data;
+    },
+  });
+}
+
+interface UsersParams {
+  role?: string | string[];
+}
+
+export function useUsers(params: UsersParams = {}) {
+  return useQuery({
+    queryKey: ['users', params],
+    queryFn: async () => {
+      const res = await api.get('/users', { params });
+      return res.data;
+    },
+  });
+}
+
