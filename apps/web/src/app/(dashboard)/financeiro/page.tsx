@@ -127,8 +127,9 @@ export default function FinanceiroPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-4" style={{ marginBottom: 'var(--space-6)' }}>
+      <div style={{ display: showNew || showDetail ? 'none' : 'block' }}>
+        {/* Stats */}
+        <div className="grid grid-4" style={{ marginBottom: 'var(--space-6)' }}>
         {stats.map((stat, i) => {
           const Icon = stat.icon;
           return (
@@ -284,9 +285,10 @@ export default function FinanceiroPage() {
           </div>
         )}
       </div>
+      </div>
       {showDetail && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowDetail(null)}>
-          <div className="card" style={{ width: 500, maxHeight: '90vh', overflow: 'auto', animation: 'fadeInUp 0.3s ease' }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <div className="card" style={{ animation: 'fadeInUp 0.3s ease' }}>
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)' }}>
                 <FileText size={18} style={{ color: 'var(--primary-500)' }} /> Detalhes da Transação
@@ -309,7 +311,7 @@ export default function FinanceiroPage() {
                     </span>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                  <div className="grid grid-2" style={{ gap: 'var(--space-3)' }}>
                     <div style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-md)' }}>
                       <div style={{ fontSize: '10px', color: 'var(--gray-400)', textTransform: 'uppercase', marginBottom: 2 }}>Paciente</div>
                       <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>{(showDetail.patient as Record<string, string>)?.name ?? '—'}</div>
@@ -360,10 +362,10 @@ export default function FinanceiroPage() {
         </div>
       )}
 
-      {/* Modal: Novo Lançamento */}
+      {/* Inline: Novo Lançamento */}
       {showNew && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowNew(false)}>
-          <div className="card" style={{ width: 500, animation: 'fadeInUp 0.3s ease' }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ marginBottom: 'var(--space-6)' }}>
+          <div className="card" style={{ animation: 'fadeInUp 0.3s ease' }}>
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}><Plus size={18} /> Novo Lançamento</h3>
               <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowNew(false)}><X size={18} /></button>
@@ -386,7 +388,7 @@ export default function FinanceiroPage() {
                   value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div className="grid grid-2" style={{ gap: 'var(--space-4)' }}>
                 <div className="form-group">
                   <label className="label">Valor (R$)</label>
                   <input type="number" className="input" placeholder="0.00" step="0.01" 
@@ -399,7 +401,7 @@ export default function FinanceiroPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div className="grid grid-2" style={{ gap: 'var(--space-4)' }}>
                 <div className="form-group">
                   <label className="label">Status</label>
                   <select className="input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>

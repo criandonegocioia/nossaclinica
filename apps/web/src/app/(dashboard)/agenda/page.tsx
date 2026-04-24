@@ -240,11 +240,11 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
           </h3>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-4)' }}>
+        <div className="grid grid-2">
           {/* Patient search */}
           <div className="input-group">
-            <label className="input-label required" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><User size={12} /> Paciente</span>
+            <label className="input-label required" style={{ marginBottom: 'var(--space-2)' }}>
+              Paciente
             </label>
             {selectedPatient ? (
               <div style={{

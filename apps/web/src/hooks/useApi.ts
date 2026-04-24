@@ -169,10 +169,11 @@ export function useReschedule() {
 // Medical Records Hooks
 // =============================================
 
-export function useMedicalRecords(patientId: string) {
+export function useMedicalRecords(patientId?: string) {
   return useQuery({
     queryKey: ['medical-records', patientId],
     queryFn: async () => {
+      if (!patientId) return { data: [], meta: { total: 0 } };
       const res = await api.get('/medical-records', { params: { patientId } });
       return res.data;
     },
@@ -642,6 +643,19 @@ export function useUsers(params: UsersParams = {}) {
     queryFn: async () => {
       const res = await api.get('/users', { params });
       return res.data;
+    },
+  });
+}
+
+export function useFinalizeMedicalRecord() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.patch(`/medical-records/${id}/finalize`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medical-records'] });
     },
   });
 }

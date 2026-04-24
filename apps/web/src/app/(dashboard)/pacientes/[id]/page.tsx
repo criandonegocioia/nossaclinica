@@ -115,7 +115,7 @@ function EditPatientInline({ patient, onDone }: { patient: Record<string, unknow
         <button className="btn btn-ghost btn-sm" onClick={onDone}><X size={14} /> Cancelar</button>
       </div>
       <div className="card-body">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-4)' }}>
+        <div className="grid grid-2">
           <Field label="Nome completo" span>
             <input className="input" value={form.name} onChange={(e) => set('name', e.target.value)} />
           </Field>
@@ -190,7 +190,7 @@ function NewRecordInline({ patientId, onDone }: { patientId: string; onDone: () 
     <div className="card" style={{ animation: 'fadeInUp 0.25s ease' }}>
       <div className="card-body">
         <InlineFormHeader title="Novo Atendimento" onBack={onDone} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-4)' }}>
+        <div className="grid grid-2">
           <Field label="Data e hora">
             <input className="input" type="datetime-local" value={form.dateTime} onChange={(e) => set('dateTime', e.target.value)} />
           </Field>
@@ -270,7 +270,7 @@ function UploadPhotoInline({ patientId, onDone }: { patientId: string; onDone: (
         <InlineFormHeader title="Upload de Fotos" onBack={onDone} />
 
         {/* Categoria + Descrição primeiro */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-4)', marginBottom: 'var(--space-5)' }}>
+        <div className="grid grid-2" style={{ marginBottom: 'var(--space-5)' }}>
           <Field label="Categoria">
             <select className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="ANTES">Antes</option>
@@ -437,7 +437,7 @@ function NewAnamnesisInline({ patientId, onDone }: { patientId: string; onDone: 
           {HEALTH_QUESTIONS.map((q) => (
             <YesNoToggle key={q.id} label={q.label} value={data[q.id] as boolean | undefined} onChange={(v) => set(q.id, v)} />
           ))}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
+          <div className="grid grid-2" style={{ marginTop: 'var(--space-4)' }}>
             <Field label="Pressão arterial habitual">
               <input className="input" placeholder="Ex: 120/80 mmHg" value={(data.pressao as string) || ''} onChange={(e) => set('pressao', e.target.value)} />
             </Field>
@@ -483,7 +483,7 @@ function NewAnamnesisInline({ patientId, onDone }: { patientId: string; onDone: 
         </div>
       );
       case 3: return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+        <div className="grid grid-2">
           <Field label="Tabagismo">
             <ChipSelect options={['Nunca fumou', 'Ex-fumante', 'Fumante eventual', 'Fumante diário']} value={(data.tabagismo as string) || ''} onChange={(v) => set('tabagismo', v)} />
           </Field>
@@ -722,7 +722,7 @@ function NewFinanceInline({ patientId, onDone }: { patientId: string; onDone: ()
              </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-4)' }}>
+          <div className="grid grid-2">
             <Field label="Método de pagamento">
               <select className="input" value={form.paymentMethod} onChange={(e) => set('paymentMethod', e.target.value)}>
                 {Object.entries(PAYMENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -820,7 +820,7 @@ function NewScheduleInline({ patientId, patientName, onDone }: { patientId: stri
     <div className="card" style={{ animation: 'fadeInUp 0.25s ease' }}>
       <div className="card-body">
         <InlineFormHeader title="Novo Agendamento" onBack={onDone} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-4)' }}>
+        <div className="grid grid-2">
           <Field label="Data">
             <input className="input" type="date" min={new Date().toISOString().split('T')[0]} value={form.date} onChange={(e) => set('date', e.target.value)} />
           </Field>
@@ -1230,11 +1230,16 @@ Condição de Pagamento: ${paymentCondition}`;
                         <td>R$ {line.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                         <td>
                           <div style={{ display: 'flex', gap: 'var(--space-1)', alignItems: 'center' }}>
-                            <select className="input" value={line.discountType} onChange={(e) => {
-                              if (e.target.value === 'CAMPANHA') return;
-                              updateLine(line.procId, 'discountType', e.target.value);
-                              if (e.target.value === 'NENHUM') updateLine(line.procId, 'discountValue', 0);
-                            }} style={{ fontSize: '11px', height: 28, width: 90, padding: '0 4px' }}>
+                            <select className="input" value={line.discountType === 'CAMPANHA' ? `CAMP_${line.campaignId}` : line.discountType} onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === 'CAMPANHA') return;
+                              if (val.startsWith('CAMP_')) {
+                                applyLineCampaign(line.procId, val.replace('CAMP_', ''));
+                                return;
+                              }
+                              updateLine(line.procId, 'discountType', val);
+                              if (val === 'NENHUM') updateLine(line.procId, 'discountValue', 0);
+                            }} style={{ fontSize: '11px', height: 28, minWidth: 90, maxWidth: 160, width: 'auto', padding: '0 4px' }}>
                               <option value="NENHUM">Nenhum</option>
                               <option value="PERCENTUAL">%</option>
                               <option value="FIXO">R$ Fixo</option>
@@ -1288,7 +1293,7 @@ Condição de Pagamento: ${paymentCondition}`;
         )}
 
         {/* Payment condition */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
+        <div className="grid grid-2" style={{ marginTop: 'var(--space-4)' }}>
           <Field label="Condições de pagamento">
             <select className="input" value={paymentCondition} onChange={(e) => setPaymentCondition(e.target.value)}>
               <option>PIX</option>
@@ -1472,7 +1477,7 @@ function NewDocumentInline({ patientName, patientId, onDone }: { patientName: st
     <div className="card" style={{ animation: 'fadeInUp 0.25s ease' }}>
       <div className="card-body">
         <InlineFormHeader title="Gerar Documento" onBack={onDone} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-4)' }}>
+        <div className="grid grid-2">
           <Field label="Tipo de documento">
             <select className="input" value={docType} onChange={(e) => handleTypeChange(e.target.value)}>
               {DOC_TYPES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}

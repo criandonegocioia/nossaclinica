@@ -128,11 +128,10 @@ export class SchedulingService {
       startAt, 
       endAt, 
       status: 'AGENDADO', 
-      professionalId: profId, 
-      roomId: rmId 
     };
-    
-    if (data.procedureId) updateData.procedureId = data.procedureId;
+    if (profId) updateData.professional = { connect: { id: profId } };
+    if (rmId) updateData.room = { connect: { id: rmId } };
+    if (data.procedureId) updateData.procedure = { connect: { id: data.procedureId } };
     if (data.notes !== undefined) updateData.notes = data.notes;
 
     return this.prisma.schedule.update({

@@ -15,36 +15,7 @@ import {
   Edit3,
 } from 'lucide-react';
 
-interface RecordEntry {
-  id: string;
-  date: string;
-  professional: string;
-  type: string;
-  status: 'DRAFT' | 'FINAL';
-  content: string;
-  procedures: string[];
-}
 
-const MOCK_RECORDS: RecordEntry[] = [
-  {
-    id: '1',
-    date: '2026-04-15T14:30:00',
-    professional: 'Dr. João Silva',
-    type: 'Consulta de Avaliação',
-    status: 'FINAL',
-    content: 'Paciente compareceu para avaliação inicial. Queixa principal: dor no dente 36. Exame clínico revelou cárie extensa com comprometimento pulpar. Indicado tratamento endodôntico.',
-    procedures: ['Exame clínico', 'Raio-X periapical'],
-  },
-  {
-    id: '2',
-    date: '2026-04-10T10:00:00',
-    professional: 'Dra. Ana Costa',
-    type: 'Harmonização Orofacial',
-    status: 'FINAL',
-    content: 'Aplicação de toxina botulínica em região frontal e glabelar. Total: 40U Botox. Paciente orientada sobre cuidados pós-procedimento.',
-    procedures: ['Toxina botulínica - Frontal', 'Toxina botulínica - Glabela'],
-  },
-];
 
 const PROCEDURE_OPTIONS = [
   'Exame clínico',
@@ -64,8 +35,9 @@ const PROCEDURE_OPTIONS = [
   'Peeling',
 ];
 
+import { useMedicalRecords, useCreateMedicalRecord, useFinalizeMedicalRecord } from '@/hooks/useApi';
+
 export default function ProntuarioPage() {
-  const [records, setRecords] = useState<RecordEntry[]>(MOCK_RECORDS);
   const [showNewRecord, setShowNewRecord] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -75,37 +47,43 @@ export default function ProntuarioPage() {
   const [saving, setSaving] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
-  const handleSaveRecord = async (status: 'DRAFT' | 'FINAL') => {
-    setSaving(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    
-    if (editingId) {
-      setRecords(prev => prev.map(r => r.id === editingId ? {
-        ...r,
-        type: newType,
-        status: status,
-        content: newContent,
-        procedures: newProcedures,
-      } : r));
-    } else {
-      const newRecord: RecordEntry = {
-        id: Math.random().toString(36).substring(7),
-        date: new Date().toISOString(),
-        professional: 'Profissional Atual',
-        type: newType,
-        status: status,
-        content: newContent,
-        procedures: newProcedures,
-      };
-      setRecords([newRecord, ...records]);
-    }
+  const { data: recordsData, isLoading, refetch } = useMedicalRecords(selectedPatientId ?? undefined);
+  const records = (recordsData?.data || []) as any[];
+  
+  const createRecord = useCreateMedicalRecord();
+  const finalizeRecord = useFinalizeMedicalRecord();
 
-    setSaving(false);
-    setShowNewRecord(false);
-    setEditingId(null);
-    setNewContent('');
-    setNewType('');
-    setNewProcedures([]);
+  const handleSaveRecord = async (status: 'DRAFT' | 'FINAL') => {
+    if (!selectedPatientId) return;
+    setSaving(true);
+    
+    try {
+      if (editingId) {
+        // Edit draft not fully supported by backend without new version yet, but we'll try finalize if status is FINAL
+        if (status === 'FINAL') {
+          await finalizeRecord.mutateAsync(editingId);
+        }
+      } else {
+        const payload = {
+          patientId: selectedPatientId,
+          type: newType,
+          status: status,
+          content: newContent,
+          procedures: newProcedures,
+        };
+        await createRecord.mutateAsync(payload);
+      }
+      
+      setShowNewRecord(false);
+      setEditingId(null);
+      setNewContent('');
+      setNewType('');
+      setNewProcedures([]);
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Erro ao salvar prontuário.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancelNewRecord = () => {
@@ -116,11 +94,11 @@ export default function ProntuarioPage() {
     setNewProcedures([]);
   };
 
-  const handleEditRecord = (record: RecordEntry) => {
+  const handleEditRecord = (record: any) => {
     setEditingId(record.id);
     setNewType(record.type);
     setNewContent(record.content);
-    setNewProcedures(record.procedures);
+    setNewProcedures(record.procedures || []);
     setShowNewRecord(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -175,7 +153,7 @@ export default function ProntuarioPage() {
             <span className="badge badge-warning">Rascunho</span>
           </div>
           <div className="card-body">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-4)', marginBottom: 'var(--space-5)' }}>
+            <div className="grid grid-2" style={{ marginBottom: 'var(--space-5)' }}>
               <div className="input-group">
                 <label className="input-label required">Tipo de atendimento</label>
                 <select className="input" value={newType} onChange={(e) => setNewType(e.target.value)}>
@@ -263,9 +241,16 @@ export default function ProntuarioPage() {
           width: 2, background: 'var(--gray-100)',
         }} />
 
-        {records.map((record, i) => {
+        {isLoading && selectedPatientId && (
+          <div style={{ textAlign: 'center', padding: 'var(--space-4)', color: 'var(--gray-500)' }}>Carregando prontuário...</div>
+        )}
+        {!isLoading && selectedPatientId && records.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 'var(--space-4)', color: 'var(--gray-500)' }}>Nenhum registro encontrado.</div>
+        )}
+
+        {records.map((record: any, i: number) => {
           const isExpanded = expandedId === record.id;
-          const date = new Date(record.date);
+          const date = new Date(record.createdAt || record.date);
 
           return (
             <div
@@ -295,7 +280,7 @@ export default function ProntuarioPage() {
                           <Clock size={12} /> {date.toLocaleDateString('pt-BR')} às {date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                          <User size={12} /> {record.professional}
+                          <User size={12} /> {(record.professional as any)?.name || record.professionalId || 'Sistema'}
                         </span>
                       </div>
                     </div>
@@ -311,9 +296,9 @@ export default function ProntuarioPage() {
 
                 {isExpanded && (
                   <div className="card-body" style={{ animation: 'fadeInUp 0.2s ease', borderTop: '1px solid var(--gray-50)' }}>
-                    {record.procedures.length > 0 && (
-                      <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
-                        {record.procedures.map((proc) => (
+                    {record.procedures?.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+                        {record.procedures.map((proc: any) => (
                           <span key={proc} className="badge badge-primary" style={{ fontSize: '11px' }}>
                             {proc}
                           </span>
