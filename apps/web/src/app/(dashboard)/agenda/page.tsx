@@ -85,7 +85,6 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
     params && params.patientId ? { id: params.patientId, name: params.patientName } : null
   );
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [searchMode, setSearchMode] = useState<'name' | 'cpf'>('name');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saving, setSaving] = useState(false);
@@ -153,14 +152,12 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
     setSearchQuery(val);
     setDropdownOpen(val.length >= 3);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (isCpfQuery(val) && searchMode === 'cpf') {
-      setDebouncedQuery(val);
-    } else if (val.length >= 3) {
+    if (val.length >= 3) {
       debounceRef.current = setTimeout(() => setDebouncedQuery(val), 400);
     } else {
       setDebouncedQuery('');
     }
-  }, [searchMode]);
+  }, []);
 
   useEffect(() => {
     function handle(e: MouseEvent) {
@@ -248,17 +245,6 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
           <div className="input-group">
             <label className="input-label required" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><User size={12} /> Paciente</span>
-              {!selectedPatient && (
-                <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
-                  {(['name', 'cpf'] as const).map((mode) => (
-                    <button key={mode} className={`btn btn-sm ${searchMode === mode ? 'btn-primary' : 'btn-ghost'}`}
-                      onClick={(e) => { e.preventDefault(); setSearchMode(mode); setSearchQuery(''); setDebouncedQuery(''); }}
-                      style={{ fontSize: '10px', padding: '2px 6px', height: 20, minHeight: 20 }}>
-                      {mode === 'name' ? '👤 Nome' : '📋 CPF'}
-                    </button>
-                  ))}
-                </div>
-              )}
             </label>
             {selectedPatient ? (
               <div style={{
@@ -278,7 +264,7 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
                   <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
                   <input className="input" value={searchQuery}
                     onChange={(e) => handleQueryChange(e.target.value)}
-                    placeholder={searchMode === 'cpf' ? 'ex: 000.000.000-00' : 'Digite o nome do paciente...'}
+                    placeholder="Digite o nome do paciente ou CPF..."
                     style={{ paddingLeft: 32 }} />
                 </div>
                 {dropdownOpen && debouncedQuery.length >= 3 && (
@@ -377,7 +363,7 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
           <div /> {/* spacer */}
 
           <Field label="Observações" span>
-            <textarea className="input" rows={2} value={form.notes} onChange={(e) => update('notes', e.target.value)}
+            <textarea className="input" rows={4} value={form.notes} onChange={(e) => update('notes', e.target.value)}
               placeholder="Instruções para o paciente ou equipe..." style={{ resize: 'vertical' }} />
           </Field>
 
