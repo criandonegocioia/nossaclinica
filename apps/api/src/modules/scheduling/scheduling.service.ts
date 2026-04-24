@@ -67,6 +67,27 @@ export class SchedulingService {
     const startAt = new Date(data.startAt);
     const endAt = new Date(data.endAt);
 
+    // Guard: Real appointments (with patient) are NEVER blocks
+    const isRealAppointment = !!data.patientId && !!data.procedureId;
+    const isBlock = isRealAppointment ? false : (data.isBlock || false);
+
+    // Clean OpenClaw metadata from notes — keep only human-readable info
+    let notes = data.notes || '';
+    if (notes.includes('[OPENCLAW]') || notes.includes('Chat ID:') || notes.includes('CPF:')) {
+      notes = notes
+        .replace(/\[OPENCLAW\]\s*/gi, '')
+        .replace(/Paciente:\s*[^,]+(,|$)/gi, '')
+        .replace(/CPF:\s*[\d.\-]+(\s|,|$)/gi, '')
+        .replace(/Email:\s*\S+(\s|,|$)/gi, '')
+        .replace(/Tel:\s*[\d+()\-\s]+(\s|,|$)/gi, '')
+        .replace(/Chat\s*ID:\s*\S+(\s|,|$)/gi, '')
+        .replace(/Lembrete:\s*[^,]+(,|$)/gi, '')
+        .replace(/Procedimento:\s*/gi, '')
+        .trim();
+      // If notes are now empty after stripping, use a generic label
+      if (!notes) notes = 'Agendado via OpenClaw';
+    }
+
     // Check for conflicts with the professional
     await this.checkConflicts(data.professionalId, startAt, endAt, data.roomId);
 
@@ -78,8 +99,9 @@ export class SchedulingService {
         procedureId: data.procedureId,
         startAt,
         endAt,
-        notes: data.notes,
-        isBlock: data.isBlock || false,
+        notes,
+        isBlock,
+        status: isBlock ? 'BLOQUEIO' : 'AGENDADO',
         createdById: data.createdById,
         colorCode: data.procedureId
           ? (await this.prisma.procedure.findUnique({ where: { id: data.procedureId } }))?.colorCode

@@ -8,6 +8,7 @@ import {
   Stethoscope, Calendar, Phone, Mail, MapPin, Clock, Plus,
   ExternalLink, CheckCircle, Loader2, X, Save, Upload,
   ChevronLeft, Banknote, Smartphone, CreditCard, Building2, Printer,
+  Heart, Pill, ClipboardList, Eye,
 } from 'lucide-react';
 import {
   usePatient, useUpdatePatient, useCreateMedicalRecord,
@@ -383,10 +384,10 @@ const PROCEDURES_HISTORY = [
   { id: 'tratamento_dental', label: 'Já fez tratamento ortodôntico?' },
 ];
 const ANAMNESE_STEPS = [
-  { key: 'saude', title: 'Saúde Geral' },
-  { key: 'alergias', title: 'Alergias e Medicações' },
-  { key: 'historico', title: 'Histórico Médico' },
-  { key: 'habitos', title: 'Hábitos e Observações' },
+  { key: 'saude', title: 'Saúde Geral', icon: Heart },
+  { key: 'alergias', title: 'Alergias e Medicações', icon: Pill },
+  { key: 'historico', title: 'Histórico Médico', icon: ClipboardList },
+  { key: 'habitos', title: 'Hábitos e Observações', icon: Eye },
 ];
 
 function YesNoToggle({ label, value, onChange }: { label: string; value: boolean | undefined; onChange: (v: boolean) => void }) {
@@ -525,7 +526,7 @@ function NewAnamnesisInline({ patientId, onDone }: { patientId: string; onDone: 
                   alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600,
                   background: i < step ? 'var(--success-500)' : i === step ? 'var(--primary-500)' : 'var(--gray-100)',
                   color: i <= step ? 'white' : 'var(--gray-400)',
-                }}>{i < step ? '✓' : i + 1}</div>
+                }}>{i < step ? '✓' : <s.icon size={14} />}</div>
                 <span style={{ fontSize: 'var(--text-xs)', fontWeight: i === step ? 600 : 400, color: i === step ? 'var(--primary-700)' : i < step ? 'var(--success-700)' : 'var(--gray-400)', whiteSpace: 'nowrap' }}>{s.title}</span>
               </button>
               {i < ANAMNESE_STEPS.length - 1 && <div style={{ flex: 1, height: 2, margin: '0 var(--space-1)', background: i < step ? 'var(--success-300)' : 'var(--gray-100)', borderRadius: 1 }} />}
@@ -2052,10 +2053,30 @@ export default function PatientDetailPage() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                   {schedules.map((appt: Record<string, unknown>, i: number) => {
-                    const isUpcoming = !['CONCLUIDO', 'CANCELADO', 'FALTOU'].includes(String(appt.status));
+                    const rawStatus = String(appt.status);
+                    const isBlock = appt.isBlock === true;
+                    const displayStatus = isBlock ? 'BLOQUEIO' : rawStatus === 'BLOQUEIO' ? 'AGENDADO' : rawStatus;
+                    const isUpcoming = !['CONCLUIDO', 'CANCELADO', 'FALTOU'].includes(displayStatus);
                     const startAt = appt.startAt ? new Date(String(appt.startAt)) : null;
+                    const endAt = appt.endAt ? new Date(String(appt.endAt)) : null;
+                    // Extract clean procedure name from notes or procedure relation
+                    const procName = (appt.procedure as any)?.name || '';
+                    const rawNotes = String(appt.notes ?? '');
+                    // Strip OpenClaw metadata from notes (remove Paciente:, CPF:, Email:, Tel:, Chat ID:, Lembrete:)
+                    const cleanNotes = rawNotes
+                      .replace(/\[OPENCLAW\]\s*/gi, '')
+                      .replace(/Paciente:\s*[^,]+(,|$)/gi, '')
+                      .replace(/CPF:\s*[\d.\-]+(\s|,|$)/gi, '')
+                      .replace(/Email:\s*\S+(\s|,|$)/gi, '')
+                      .replace(/Tel:\s*[\d+()\-\s]+(\s|,|$)/gi, '')
+                      .replace(/Chat\s*ID:\s*\S+(\s|,|$)/gi, '')
+                      .replace(/Lembrete:\s*[^,]+(,|$)/gi, '')
+                      .replace(/Procedimento:\s*/gi, '')
+                      .trim();
+                    const displayTitle = procName || cleanNotes || 'Consulta';
+                    const statusBadge = displayStatus === 'AGENDADO' ? 'badge-primary' : displayStatus === 'CONFIRMADO' ? 'badge-success' : displayStatus === 'CONCLUIDO' ? 'badge-success' : displayStatus === 'CANCELADO' ? 'badge-error' : displayStatus === 'BLOQUEIO' ? 'badge-neutral' : 'badge-warning';
                     return (
-                      <div key={String(appt.id)} className="card" style={{ animation: `fadeInUp 0.2s ease backwards ${i * 50}ms`, border: isUpcoming ? '1px solid var(--primary-200)' : undefined }}>
+                      <div key={String(appt.id)} className="card" style={{ animation: `fadeInUp 0.2s ease backwards ${i * 50}ms`, border: isUpcoming && !isBlock ? '1px solid var(--primary-200)' : undefined, opacity: isBlock ? 0.6 : 1 }}>
                         <div className="card-body" style={{ padding: 'var(--space-4)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
@@ -2066,11 +2087,14 @@ export default function PatientDetailPage() {
                                 </div>
                               )}
                               <div>
-                                <div style={{ fontWeight: 'var(--font-medium)', fontSize: 'var(--text-sm)' }}>{String(appt.notes ?? 'Consulta')}</div>
-                                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>{startAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
+                                <div style={{ fontWeight: 'var(--font-medium)', fontSize: 'var(--text-sm)' }}>{displayTitle}</div>
+                                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>
+                                  {startAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  {endAt && <> — {endAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</>}
+                                </div>
                               </div>
                             </div>
-                            <span className={`badge badge-dot ${['CONCLUIDO'].includes(String(appt.status)) ? 'badge-success' : isUpcoming ? 'badge-primary' : 'badge-neutral'}`}>{String(appt.status)}</span>
+                            <span className={`badge badge-dot ${statusBadge}`}>{displayStatus}</span>
                           </div>
                         </div>
                       </div>
