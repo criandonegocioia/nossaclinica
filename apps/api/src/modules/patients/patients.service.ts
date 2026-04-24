@@ -1,10 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PatientsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Normaliza telefone removendo tudo que não é dígito.
+   */
+  private normalizePhone(phone: string): string {
+    return phone.replace(/\D/g, '');
+  }
 
   async findAll(params: {
     search?: string;
@@ -79,6 +86,46 @@ export class PatientsService {
   }
 
   async create(data: Prisma.PatientCreateInput) {
+    const cpf = (data as any).cpf as string | undefined;
+    const phoneMain = (data as any).phoneMain as string | undefined;
+    const whatsapp = (data as any).whatsapp as string | undefined;
+    const phone = phoneMain || whatsapp;
+
+    // 1. Dedup por CPF (match exato, já é unique no banco)
+    if (cpf) {
+      const byCpf = await this.prisma.patient.findUnique({ where: { cpf } });
+      if (byCpf) {
+        throw new ConflictException({
+          message: `Já existe paciente com este CPF: "${byCpf.name}"`,
+          existingId: byCpf.id,
+          existingName: byCpf.name,
+          matchedBy: 'CPF',
+        });
+      }
+    }
+
+    // 2. Dedup por telefone
+    if (phone) {
+      const normalized = this.normalizePhone(phone);
+      const byPhone = await this.prisma.patient.findFirst({
+        where: {
+          OR: [
+            { phoneMain: { contains: normalized } },
+            { whatsapp: { contains: normalized } },
+          ],
+        },
+      });
+
+      if (byPhone) {
+        throw new ConflictException({
+          message: `Já existe paciente com este telefone: "${byPhone.name}"`,
+          existingId: byPhone.id,
+          existingName: byPhone.name,
+          matchedBy: 'PHONE',
+        });
+      }
+    }
+
     return this.prisma.patient.create({ data });
   }
 

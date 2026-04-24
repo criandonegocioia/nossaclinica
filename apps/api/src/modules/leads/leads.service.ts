@@ -1,10 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class LeadsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Normaliza telefone removendo tudo que não é dígito.
+   * Ex: "+55 (11) 99999-9999" → "5511999999999"
+   */
+  private normalizePhone(phone: string): string {
+    return phone.replace(/\D/g, '');
+  }
 
   async findAll(params: {
     stage?: string;
@@ -56,6 +64,46 @@ export class LeadsService {
   }
 
   async create(data: Prisma.LeadCreateInput) {
+    const phone = (data as any).phone as string | undefined;
+
+    if (phone) {
+      const normalized = this.normalizePhone(phone);
+
+      // 1. Já é paciente? Retorna o paciente existente
+      const existingPatient = await this.prisma.patient.findFirst({
+        where: {
+          OR: [
+            { phoneMain: { contains: normalized } },
+            { whatsapp: { contains: normalized } },
+          ],
+        },
+      });
+
+      if (existingPatient) {
+        throw new ConflictException({
+          message: `Este telefone já pertence ao paciente "${existingPatient.name}"`,
+          existingType: 'PATIENT',
+          existingId: existingPatient.id,
+          existingName: existingPatient.name,
+        });
+      }
+
+      // 2. Já é lead? Retorna o lead existente
+      const existingLead = await this.prisma.lead.findFirst({
+        where: { phone: { contains: normalized } },
+      });
+
+      if (existingLead) {
+        throw new ConflictException({
+          message: `Este telefone já pertence ao lead "${existingLead.name}" (${existingLead.status})`,
+          existingType: 'LEAD',
+          existingId: existingLead.id,
+          existingName: existingLead.name,
+          existingStage: existingLead.status,
+        });
+      }
+    }
+
     return this.prisma.lead.create({ data });
   }
 
@@ -84,11 +132,39 @@ export class LeadsService {
     const lead = await this.prisma.lead.findUnique({ where: { id } });
     if (!lead) throw new NotFoundException('Lead não encontrado');
 
+    // Verificar se já existe paciente com mesmo telefone
+    if (lead.phone) {
+      const normalized = this.normalizePhone(lead.phone);
+      const existingPatient = await this.prisma.patient.findFirst({
+        where: {
+          OR: [
+            { phoneMain: { contains: normalized } },
+            { whatsapp: { contains: normalized } },
+          ],
+        },
+      });
+
+      if (existingPatient) {
+        // Vincular lead ao paciente existente em vez de criar duplicado
+        await this.prisma.lead.update({
+          where: { id },
+          data: { patientId: existingPatient.id, status: 'CLOSED_WON' },
+        });
+
+        return {
+          patient: existingPatient,
+          lead: { ...lead, patientId: existingPatient.id, status: 'CLOSED_WON' },
+          alreadyExisted: true,
+        };
+      }
+    }
+
     // Create patient from lead data
     const patient = await this.prisma.patient.create({
       data: {
         name: lead.name,
         phoneMain: lead.phone ?? undefined,
+        whatsapp: lead.phone ?? undefined,
         email: lead.email ?? undefined,
         status: 'ATIVO',
       } as never,
@@ -100,7 +176,7 @@ export class LeadsService {
       data: { patientId: patient.id, status: 'CLOSED_WON' },
     });
 
-    return { patient, lead: { ...lead, patientId: patient.id, status: 'CLOSED_WON' } };
+    return { patient, lead: { ...lead, patientId: patient.id, status: 'CLOSED_WON' }, alreadyExisted: false };
   }
 
   async getKpis() {
