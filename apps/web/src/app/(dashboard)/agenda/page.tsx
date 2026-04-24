@@ -113,7 +113,7 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
   const [timeSlots, setTimeSlots] = useState<string[]>([]);
 
   useEffect(() => {
-    const slots = [];
+    const slots: string[] = [];
     let currentMinutes = 8 * 60; // 08:00
     const endMinutes = 20 * 60; // 20:00
     const interval = Math.max(form.duration || 60, 60); // Minimo de 1h
