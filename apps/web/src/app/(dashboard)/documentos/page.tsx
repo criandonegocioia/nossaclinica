@@ -214,7 +214,7 @@ function TemplatePanel({ onClose, onSelect }: { onClose: () => void; onSelect: (
 function EmptyState({ onGenerate }: { onGenerate: () => void }) {
   return (
     <tr>
-      <td colSpan={6}>
+      <td colSpan={6} style={{ padding: 0, borderBottom: 'none' }}>
         <div
           style={{
             display: 'flex',
@@ -362,15 +362,15 @@ export default function DocumentosPage() {
         >
           <Filter size={14} style={{ color: 'var(--gray-300)', flexShrink: 0 }} />
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-medium)', color: 'var(--gray-500)', whiteSpace: 'nowrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--gray-700)', whiteSpace: 'nowrap' }}>
               Paciente:
             </span>
             <select
               className="input"
               value={selectedPatientId || 'all'}
               onChange={(e) => { setSelectedPatientId(e.target.value === 'all' ? null : e.target.value); setPage(1); }}
-              style={{ height: 32, fontSize: 'var(--text-xs)', minWidth: 200, cursor: 'pointer' }}
+              style={{ padding: '8px 12px', fontSize: 'var(--text-sm)', minWidth: 240, cursor: 'pointer', backgroundColor: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)' }}
             >
               <option value="all">Todos os pacientes</option>
               {allPatients.map((p: any) => (
@@ -379,15 +379,15 @@ export default function DocumentosPage() {
             </select>
           </label>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-medium)', color: 'var(--gray-500)', whiteSpace: 'nowrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)', color: 'var(--gray-700)', whiteSpace: 'nowrap' }}>
               Tipo:
             </span>
             <select
               className="input"
               value={typeFilter}
               onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
-              style={{ height: 32, fontSize: 'var(--text-xs)', minWidth: 160, cursor: 'pointer' }}
+              style={{ padding: '8px 12px', fontSize: 'var(--text-sm)', minWidth: 180, cursor: 'pointer', backgroundColor: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)' }}
             >
               <option value="all">Todos os tipos</option>
               {DOC_TEMPLATES.map((t) => (
@@ -417,15 +417,15 @@ export default function DocumentosPage() {
             <p style={{ fontSize: 'var(--text-sm)' }}>Buscando documentos...</p>
           </div>
         ) : (
-          <table className="table">
+          <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr>
-                <th>Documento</th>
-                <th>Paciente</th>
-                <th>Profissional</th>
-                <th>Data</th>
-                <th>Tipo</th>
-                <th style={{ textAlign: 'right' }}>Ações</th>
+              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--gray-200)' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Documento</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Paciente</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Profissional</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Data</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tipo</th>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -448,6 +448,7 @@ export default function DocumentosPage() {
                               height: 32,
                               borderRadius: 'var(--radius-md)',
                               background: tpl?.bg || '#f1f5f9',
+                              border: `1px solid ${tpl?.color}30` || '1px solid #cbd5e1',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
