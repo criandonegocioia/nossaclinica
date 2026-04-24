@@ -1895,15 +1895,82 @@ export default function PatientDetailPage() {
                           </div>
                         </div>
                         
-                        {(anamnese.data || anamnese.content) && typeof (anamnese.data || anamnese.content) === 'object' && (
-                          <pre style={{ 
-                            fontSize: 'var(--text-xs)', color: 'var(--gray-600)', background: 'var(--gray-25)', 
-                            padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', overflow: 'auto', 
-                            maxHeight: 250, fontFamily: 'monospace', margin: 0, border: '1px solid var(--gray-100)' 
-                          }}>
-                            {JSON.stringify(anamnese.data || anamnese.content, null, 2)}
-                          </pre>
-                        )}
+                        {(anamnese.data || anamnese.content) && typeof (anamnese.data || anamnese.content) === 'object' && (() => {
+                          const raw = anamnese.data || anamnese.content;
+                          const entries = Object.entries(raw);
+                          // Detect API format: {q01_xxx: {pergunta, resposta}} vs wizard format {key: value}
+                          const isApiFormat = entries.length > 0 && typeof entries[0][1] === 'object' && entries[0][1] !== null && 'pergunta' in (entries[0][1] as Record<string, unknown>);
+                          
+                          if (isApiFormat) {
+                            // Sort by key (q01, q02, ...) to ensure order
+                            const sorted = entries.sort(([a], [b]) => a.localeCompare(b));
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: '1px solid var(--gray-100)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+                                {sorted.map(([key, val]: [string, any], i: number) => {
+                                  const resp = String(val.resposta || '').toLowerCase();
+                                  const isYes = resp === 'sim' || resp.startsWith('sim');
+                                  const isNo = resp === 'nao' || resp === 'não' || resp.startsWith('nao') || resp.startsWith('não');
+                                  return (
+                                    <div key={key} style={{
+                                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                      padding: 'var(--space-3) var(--space-4)',
+                                      background: i % 2 === 0 ? 'var(--gray-25)' : 'white',
+                                      borderBottom: i < sorted.length - 1 ? '1px solid var(--gray-50)' : 'none',
+                                    }}>
+                                      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-700)', flex: 1 }}>
+                                        {val.pergunta || key.replace(/_/g, ' ').replace(/^q\d+\s*/, '')}
+                                      </span>
+                                      <span style={{
+                                        fontSize: 'var(--text-xs)', fontWeight: 600,
+                                        padding: '2px 10px', borderRadius: 'var(--radius-full)',
+                                        background: isYes ? 'var(--warning-50, #fffbeb)' : isNo ? 'var(--success-50, #f0fdf4)' : 'var(--gray-100)',
+                                        color: isYes ? 'var(--warning-700, #a16207)' : isNo ? 'var(--success-700, #15803d)' : 'var(--gray-700)',
+                                      }}>
+                                        {String(val.resposta || '—')}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          }
+                          
+                          // Wizard format: flat {key: boolean | string}
+                          const LABELS: Record<string, string> = {
+                            cardiopatia: 'Cardiopatia', hipertensao: 'Hipertensão', diabetes: 'Diabetes',
+                            hepatite: 'Hepatite', hiv: 'HIV', gravidez: 'Gravidez', anemia: 'Anemia',
+                            hemorragia: 'Hemorragias', convulsao: 'Convulsões', rinite: 'Rinite/Sinusite',
+                            asma: 'Asma', febre_reumatica: 'Febre Reumática', pressao: 'Pressão Arterial',
+                            tipo_sanguineo: 'Tipo Sanguíneo', alergias: 'Alergias', medicamentos: 'Medicamentos',
+                            anticoagulante: 'Anticoagulante', suplementos: 'Suplementos',
+                            tabagismo: 'Tabagismo', etilismo: 'Etilismo', bruxismo: 'Bruxismo',
+                            respiracao: 'Respiração', observacoes: 'Observações',
+                          };
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: '1px solid var(--gray-100)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+                              {entries.filter(([k]) => !k.endsWith('_detail')).map(([key, val], i: number) => (
+                                <div key={key} style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                  padding: 'var(--space-3) var(--space-4)',
+                                  background: i % 2 === 0 ? 'var(--gray-25)' : 'white',
+                                  borderBottom: '1px solid var(--gray-50)',
+                                }}>
+                                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-700)', flex: 1 }}>
+                                    {LABELS[key] || key.replace(/_/g, ' ')}
+                                  </span>
+                                  <span style={{
+                                    fontSize: 'var(--text-xs)', fontWeight: 600,
+                                    padding: '2px 10px', borderRadius: 'var(--radius-full)',
+                                    background: val === true ? 'var(--warning-50, #fffbeb)' : val === false ? 'var(--success-50, #f0fdf4)' : 'var(--gray-100)',
+                                    color: val === true ? 'var(--warning-700, #a16207)' : val === false ? 'var(--success-700, #15803d)' : 'var(--gray-700)',
+                                  }}>
+                                    {val === true ? 'Sim' : val === false ? 'Não' : String(val || '—')}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
                         {!anamnese.data && !anamnese.content && (
                            <div style={{ padding: 'var(--space-3)', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>
                              Sem dados detalhados.
