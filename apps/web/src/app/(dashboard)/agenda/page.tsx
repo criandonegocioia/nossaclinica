@@ -17,7 +17,7 @@ import {
   Search,
   Mail,
 } from 'lucide-react';
-import { usePatients, useSchedules, useCreateSchedule, useRooms, useProcedures, useUsers } from '@/hooks/useApi';
+import { usePatients, useSchedules, useCreateSchedule, useReschedule, useRooms, useProcedures, useUsers } from '@/hooks/useApi';
 import { api } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -27,22 +27,23 @@ const DURATIONS = [
   { value: 90, label: '1h30' }, { value: 120, label: '2h' },
 ];
 
-const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
-  const hour = Math.floor(i / 2) + 8;
-  const min = i % 2 === 0 ? '00' : '30';
-  return `${hour.toString().padStart(2, '0')}:${min}`;
-});
+// Time slots are now dynamic based on procedure duration
 
 interface Appointment {
   id: string;
+  patientId?: string;
   patientName: string;
+  procedureId?: string;
   procedure: string;
   date: string;
   time: string;
   duration: number;
+  roomId?: string;
   room: string;
   status: 'SCHEDULED' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  professionalId?: string;
   professional: string;
+  notes?: string;
 }
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }> = {
@@ -81,7 +82,7 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<{ id: string; name: string } | null>(
-    params ? { id: 'edit-mock', name: params.patientName } : null
+    params && params.patientId ? { id: params.patientId, name: params.patientName } : null
   );
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchMode, setSearchMode] = useState<'name' | 'cpf'>('name');
@@ -95,17 +96,40 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
   const { data: dbProfessionals } = useUsers({ role: ['DENTISTA', 'HOF'] });
   const createSchedule = useCreateSchedule();
 
+  const reschedule = useReschedule();
+
   const [form, setForm] = useState({
-    procedureId: '',
-    professionalId: '',
+    procedureId: params?.procedureId || '',
+    professionalId: params?.professionalId || '',
     date: params?.date || defaultDate,
     time: params?.time || defaultTime || '09:00',
     duration: params?.duration || 60,
-    roomId: '',
-    notes: '',
+    roomId: params?.roomId || '',
+    notes: params?.notes || '',
     sendWhatsApp: true,
     sendEmail: false,
   });
+
+  const [timeSlots, setTimeSlots] = useState<string[]>([]);
+
+  useEffect(() => {
+    const slots = [];
+    let currentMinutes = 8 * 60; // 08:00
+    const endMinutes = 20 * 60; // 20:00
+    const interval = Math.max(form.duration || 60, 60); // Minimo de 1h
+    while (currentMinutes < endMinutes) {
+      const h = Math.floor(currentMinutes / 60);
+      const m = currentMinutes % 60;
+      slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+      currentMinutes += interval;
+    }
+    setTimeSlots(slots);
+    
+    // Check if current time is not in the list, then select first available
+    if (!slots.includes(form.time) && slots.length > 0) {
+      setForm((prev) => ({ ...prev, time: slots[0] }));
+    }
+  }, [form.duration]);
 
   useEffect(() => {
     if (!form.procedureId && dbProcedures?.length > 0) update('procedureId', dbProcedures[0].id);
@@ -117,12 +141,7 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
     if (form.procedureId && dbProcedures) {
       const proc = dbProcedures.find((p: any) => p.id === form.procedureId);
       if (proc) {
-        const procName = proc.name.toLowerCase();
-        if (procName.includes('avaliação') || procName.includes('avaliacao')) {
-          update('duration', 120);
-        } else {
-          update('duration', 60);
-        }
+        update('duration', proc.durationDefault || 60);
       }
     }
   }, [form.procedureId, dbProcedures]);
@@ -166,15 +185,27 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
       const startAt = new Date(`${form.date}T${form.time}:00`);
       const endAt = new Date(startAt.getTime() + form.duration * 60000);
 
-      await createSchedule.mutateAsync({
-        patientId: selectedPatient.id,
-        professionalId: form.professionalId,
-        roomId: form.roomId,
-        procedureId: form.procedureId,
-        startAt: startAt.toISOString(),
-        endAt: endAt.toISOString(),
-        notes: form.notes,
-      });
+      if (params?.id) {
+        await reschedule.mutateAsync({
+          id: params.id,
+          professionalId: form.professionalId,
+          roomId: form.roomId,
+          procedureId: form.procedureId,
+          startAt: startAt.toISOString(),
+          endAt: endAt.toISOString(),
+          notes: form.notes,
+        });
+      } else {
+        await createSchedule.mutateAsync({
+          patientId: selectedPatient.id,
+          professionalId: form.professionalId,
+          roomId: form.roomId,
+          procedureId: form.procedureId,
+          startAt: startAt.toISOString(),
+          endAt: endAt.toISOString(),
+          notes: form.notes,
+        });
+      }
       
       setSaved(true);
       setTimeout(() => onDone(true as any), 1800);
@@ -321,7 +352,7 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
               </Field>
               <Field label="Horário" required>
                 <select className="input" value={form.time} onChange={(e) => update('time', e.target.value)}>
-                  {TIME_SLOTS.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {timeSlots.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </Field>
               <Field label="Duração">
@@ -482,14 +513,19 @@ export default function AgendaPage() {
     const localD = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
     return {
       id: s.id,
+      patientId: s.patientId,
       patientName: s.patient?.name || 'Bloqueio',
+      procedureId: s.procedureId,
       procedure: s.procedure?.name || s.notes || '—',
       date: localD.toISOString().split('T')[0],
       time: d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       duration,
+      roomId: s.roomId,
       room: s.room?.name || roomsList[0],
       status: s.status === 'AGENDADO' || s.status === 'BLOQUEIO' ? 'SCHEDULED' : s.status === 'CONFIRMADO' ? 'CONFIRMED' : s.status === 'EM_ATENDIMENTO' ? 'IN_PROGRESS' : s.status === 'CONCLUIDO' ? 'COMPLETED' : 'CANCELLED',
+      professionalId: s.professionalId,
       professional: s.professional?.name || '—',
+      notes: s.notes,
     };
   });
 

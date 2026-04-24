@@ -55,8 +55,8 @@ export class SchedulingController {
   @Patch(':id/reschedule')
   reschedule(
     @Param('id') id: string,
-    @Body() body: { startAt: string; endAt: string },
+    @Body() body: { startAt: string; endAt: string; professionalId?: string; roomId?: string; procedureId?: string; notes?: string },
   ) {
-    return this.service.reschedule(id, body.startAt, body.endAt);
+    return this.service.reschedule(id, body);
   }
 }

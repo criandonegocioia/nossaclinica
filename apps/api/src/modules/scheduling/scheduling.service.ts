@@ -113,17 +113,31 @@ export class SchedulingService {
     });
   }
 
-  async reschedule(id: string, newStartAt: string, newEndAt: string) {
+  async reschedule(id: string, data: { startAt: string; endAt: string; professionalId?: string; roomId?: string; procedureId?: string; notes?: string }) {
     const schedule = await this.findById(id);
 
-    const startAt = new Date(newStartAt);
-    const endAt = new Date(newEndAt);
+    const startAt = new Date(data.startAt);
+    const endAt = new Date(data.endAt);
+    
+    const profId = data.professionalId || schedule.professionalId;
+    const rmId = data.roomId || schedule.roomId;
 
-    await this.checkConflicts(schedule.professionalId, startAt, endAt, schedule.roomId, id);
+    await this.checkConflicts(profId, startAt, endAt, rmId, id);
+
+    const updateData: Prisma.ScheduleUpdateInput = { 
+      startAt, 
+      endAt, 
+      status: 'AGENDADO', 
+      professionalId: profId, 
+      roomId: rmId 
+    };
+    
+    if (data.procedureId) updateData.procedureId = data.procedureId;
+    if (data.notes !== undefined) updateData.notes = data.notes;
 
     return this.prisma.schedule.update({
       where: { id },
-      data: { startAt, endAt, status: 'AGENDADO' },
+      data: updateData,
     });
   }
 

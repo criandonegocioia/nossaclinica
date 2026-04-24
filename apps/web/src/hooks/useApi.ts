@@ -152,6 +152,19 @@ export function useUpdateScheduleStatus(id: string) {
   });
 }
 
+export function useReschedule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; startAt: string; endAt: string; professionalId?: string; roomId?: string; procedureId?: string; notes?: string }) => {
+      const res = await api.patch(`/schedules/${id}/reschedule`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+    },
+  });
+}
+
 // =============================================
 // Medical Records Hooks
 // =============================================
