@@ -1900,7 +1900,7 @@ export default function PatientDetailPage() {
                 </div></div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                  {anamneses.map((anamnese: any, index: number) => (
+                  {[...anamneses].sort((a: any, b: any) => new Date(b.filledAt ?? b.createdAt ?? 0).getTime() - new Date(a.filledAt ?? a.createdAt ?? 0).getTime()).map((anamnese: any, index: number) => (
                     <div key={anamnese.id} className="card" style={{ animation: `fadeInUp 0.3s ease backwards ${index * 80}ms` }}>
                       <div className="card-body">
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
