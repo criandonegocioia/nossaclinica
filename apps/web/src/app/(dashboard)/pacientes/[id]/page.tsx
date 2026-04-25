@@ -451,6 +451,9 @@ function NewAnamnesisInline({ patientId, onDone, anamnesisId, initialData }: { p
             <YesNoToggle key={q.id} label={q.label} value={data[q.id] as boolean | undefined} onChange={(v) => set(q.id, v)} />
           ))}
           <div className="grid grid-2" style={{ marginTop: 'var(--space-4)' }}>
+            <Field label="Idade">
+              <input className="input" type="number" min="0" max="120" placeholder="Ex: 35" value={(data.idade as string) || ''} onChange={(e) => set('idade', e.target.value)} />
+            </Field>
             <Field label="Pressão arterial habitual">
               <input className="input" placeholder="Ex: 120/80 mmHg" value={(data.pressao as string) || ''} onChange={(e) => set('pressao', e.target.value)} />
             </Field>

@@ -51,7 +51,7 @@ export class AnamnesesService {
     q09_herpes_simples: 'hepatite', // mapped to closest wizard field
     q10_cancer: 'convulsao', // mapped to closest wizard field
     q11_doenca_autoimune: 'febre_reumatica', // mapped to closest wizard field
-    q12_idade: 'observacoes',
+    q12_idade: 'idade',
   };
 
   private normalizeOpenClawData(rawData: Record<string, unknown>): Record<string, unknown> {
