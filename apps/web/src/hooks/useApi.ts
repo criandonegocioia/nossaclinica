@@ -222,6 +222,19 @@ export function useCreateAnamnesis() {
   });
 }
 
+export function useUpdateAnamnesis() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: string } & Record<string, unknown>) => {
+      const res = await api.patch(`/anamneses/${id}`, data);
+      return res.data;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['anamneses', vars.patientId as string] });
+    },
+  });
+}
+
 // =============================================
 // HOF Records Hooks
 // =============================================

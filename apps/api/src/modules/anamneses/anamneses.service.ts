@@ -110,4 +110,26 @@ export class AnamnesesService {
       },
     });
   }
+
+  async update(id: string, data: Record<string, unknown>) {
+    const rawData = (data.data as Record<string, unknown>) || {};
+    const normalizedData = this.normalizeOpenClawData(rawData);
+    
+    // Allow passing status explicitly or determine from content
+    const hasContent = Object.keys(normalizedData).length > 0;
+    const currentAnamnesis = await this.prisma.anamnesis.findUnique({ where: { id } });
+    
+    // If it was already PREENCHIDA, keep it. If it was RASCUNHO and has content now, it stays RASCUNHO unless passed explicitly or maybe PREENCHIDA? 
+    // Usually if a user edits a draft and saves it, they might want to finalize it. Let's just use data.status or default to what it was.
+    const status = data.status || currentAnamnesis?.status || 'RASCUNHO';
+
+    return this.prisma.anamnesis.update({
+      where: { id },
+      data: {
+        data: normalizedData as any,
+        status: status as never,
+        ...(data.filledAt ? { filledAt: new Date(data.filledAt as string) } : {}),
+      },
+    });
+  }
 }

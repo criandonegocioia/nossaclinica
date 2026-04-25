@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Param, Body, Query,
+  Controller, Get, Post, Patch, Param, Body, Query,
   UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { AnamnesesService } from './anamneses.service';
@@ -42,5 +42,11 @@ export class AnamnesesController {
   @Roles('ADMIN', 'DENTISTA', 'HOF')
   create(@Body() body: Record<string, unknown>, @CurrentUser('sub') userId: string) {
     return this.service.create({ ...body, professionalId: userId });
+  }
+
+  @Patch(':id')
+  @Roles('ADMIN', 'DENTISTA', 'HOF')
+  update(@Param('id') id: string, @Body() body: Record<string, unknown>) {
+    return this.service.update(id, body);
   }
 }

@@ -15,7 +15,7 @@ import {
   useUploadPhoto, useCreateFinance, useCreateSchedule, useCreateAnamnesis,
   usePatientPhotos, useFinances, useMedicalRecords, useCreateDocument,
   useSchedules, useDocuments, useAnamneses, useMedications,
-  useUsers, useRooms, useProcedures
+  useUsers, useRooms, useProcedures, useUpdateAnamnesis
 } from '@/hooks/useApi';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -414,20 +414,32 @@ function ChipSelect({ options, value, onChange }: { options: string[]; value: st
   );
 }
 
-function NewAnamnesisInline({ patientId, onDone }: { patientId: string; onDone: () => void }) {
+function NewAnamnesisInline({ patientId, onDone, anamnesisId, initialData }: { patientId: string; onDone: () => void; anamnesisId?: string; initialData?: Record<string, string | boolean> }) {
   const [step, setStep] = useState(0);
-  const [data, setData] = useState<Record<string, string | boolean>>({});
+  const [data, setData] = useState<Record<string, string | boolean>>(initialData || {});
   const create = useCreateAnamnesis();
+  const update = useUpdateAnamnesis();
+
+  const isPending = create.isPending || update.isPending;
 
   const set = (key: string, val: string | boolean) => setData((prev) => ({ ...prev, [key]: val }));
 
-  const handleSave = async () => {
-    await create.mutateAsync({
-      patientId,
-      filledAt: new Date().toISOString(),
-      status: 'PREENCHIDA',
-      data,
-    });
+  const handleSave = async (finalStatus: 'PREENCHIDA' | 'RASCUNHO' = 'PREENCHIDA') => {
+    if (anamnesisId) {
+      await update.mutateAsync({
+        id: anamnesisId,
+        patientId,
+        status: finalStatus,
+        data,
+      });
+    } else {
+      await create.mutateAsync({
+        patientId,
+        filledAt: new Date().toISOString(),
+        status: finalStatus,
+        data,
+      });
+    }
     onDone();
   };
 
@@ -509,7 +521,7 @@ function NewAnamnesisInline({ patientId, onDone }: { patientId: string; onDone: 
   return (
     <div className="card" style={{ animation: 'fadeInUp 0.25s ease' }}>
       <div className="card-body">
-        <InlineFormHeader title="Nova Ficha de Anamnese" onBack={onDone} />
+        <InlineFormHeader title={anamnesisId ? "Editar Ficha de Anamnese" : "Nova Ficha de Anamnese"} onBack={onDone} />
 
         {/* Step indicator */}
         <div style={{ display: 'flex', gap: 0, marginBottom: 'var(--space-5)' }}>
@@ -548,9 +560,12 @@ function NewAnamnesisInline({ patientId, onDone }: { patientId: string; onDone: 
           {step < ANAMNESE_STEPS.length - 1 ? (
             <button className="btn btn-primary" onClick={() => setStep(step + 1)}>Próximo →</button>
           ) : (
-            <button className="btn btn-primary" onClick={handleSave} disabled={create.isPending}>
-              {create.isPending ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvando...</> : <><Save size={14} /> Salvar Anamnese</>}
-            </button>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <button className="btn btn-ghost" onClick={() => handleSave('RASCUNHO')} disabled={isPending}>Salvar Rascunho</button>
+              <button className="btn btn-primary" onClick={() => handleSave('PREENCHIDA')} disabled={isPending}>
+                {isPending ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvando...</> : <><Save size={14} /> Finalizar</>}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -1598,6 +1613,7 @@ export default function PatientDetailPage() {
   const [showUploadPhoto, setShowUploadPhoto] = useState(false);
   const [showNewDocument, setShowNewDocument] = useState(false);
   const [showNewAnamnesis, setShowNewAnamnesis] = useState(false);
+  const [editingAnamnese, setEditingAnamnese] = useState<any | null>(null);
   const [showNewFinance, setShowNewFinance] = useState(false);
   const [showNewSchedule, setShowNewSchedule] = useState(false);
 
@@ -1860,8 +1876,11 @@ export default function PatientDetailPage() {
       {/* ── ANAMNESE ────────────────────────────────────────────────── */}
       {activeTab === 'anamnese' && (
         <div style={{ animation: 'fadeIn 0.2s ease' }}>
-          {showNewAnamnesis ? (
-            <NewAnamnesisInline patientId={id} onDone={() => setShowNewAnamnesis(false)} />
+          {showNewAnamnesis || editingAnamnese ? (
+            <NewAnamnesisInline patientId={id} 
+              anamnesisId={editingAnamnese?.id}
+              initialData={editingAnamnese?.data || editingAnamnese?.content}
+              onDone={() => { setShowNewAnamnesis(false); setEditingAnamnese(null); }} />
           ) : (
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
@@ -1890,9 +1909,15 @@ export default function PatientDetailPage() {
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                             {anamnese.status && <span className={`badge badge-dot ${anamnese.status === 'ASSINADO' ? 'badge-success' : 'badge-warning'}`}>{anamnese.status}</span>}
-                            <button className="btn btn-ghost btn-sm btn-icon" title="Ver completo">
-                              <ExternalLink size={14} />
-                            </button>
+                            {anamnese.status === 'RASCUNHO' ? (
+                              <button className="btn btn-ghost btn-sm btn-icon" title="Editar rascunho" onClick={() => setEditingAnamnese(anamnese)}>
+                                <Edit size={14} />
+                              </button>
+                            ) : (
+                              <button className="btn btn-ghost btn-sm btn-icon" title="Ver completo">
+                                <ExternalLink size={14} />
+                              </button>
+                            )}
                           </div>
                         </div>
                         
