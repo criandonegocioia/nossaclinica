@@ -36,21 +36,35 @@ export class AnamnesesService {
 
   /**
    * Mapping from OpenClaw Q&A keys (q01_xxx) to the wizard flat format.
-   * When OpenClaw sends {q01_hipertireoidismo: {pergunta: "...", resposta: "Não"}},
-   * we translate to {hipertensao: false} so the frontend renders correctly.
+   * When OpenClaw sends {q01_cardiopatia: {pergunta: "...", resposta: "Não"}},
+   * we translate to {cardiopatia: false} so the frontend renders correctly.
    */
   private readonly QA_KEY_MAP: Record<string, string> = {
+    q01_cardiopatia: 'cardiopatia',
+    q02_hipertensao: 'hipertensao',
+    q03_diabetes: 'diabetes',
+    q04_hepatite: 'hepatite',
+    q05_hiv: 'hiv',
+    q06_gravidez: 'gravidez',
+    q07_anemia: 'anemia',
+    q08_hemorragia: 'hemorragia',
+    q09_convulsao: 'convulsao',
+    q10_rinite: 'rinite',
+    q11_asma: 'asma',
+    q12_febre_reumatica: 'febre_reumatica',
+    q13_idade: 'idade',
+    // Legacy keys (old 12-question format)
     q01_hipertireoidismo_hipotireoidismo: 'hipertensao',
     q02_usa_medicamento: 'medicamentos',
     q03_cardiaco: 'cardiopatia',
     q04_diabetes: 'diabetes',
     q05_pressao_alta: 'hipertensao',
     q06_alergia: 'alergias',
-    q07_insuficiencia_renal: 'rinite', // mapped to closest wizard field
+    q07_insuficiencia_renal: 'rinite',
     q08_alergia_medicamento: 'alergias',
-    q09_herpes_simples: 'hepatite', // mapped to closest wizard field
-    q10_cancer: 'convulsao', // mapped to closest wizard field
-    q11_doenca_autoimune: 'febre_reumatica', // mapped to closest wizard field
+    q09_herpes_simples: 'hepatite',
+    q10_cancer: 'convulsao',
+    q11_doenca_autoimune: 'febre_reumatica',
     q12_idade: 'idade',
   };
 
@@ -100,10 +114,31 @@ export class AnamnesesService {
     const hasContent = Object.keys(normalizedData).length > 0;
     const status = hasContent ? 'PREENCHIDA' : (data.status as string) || 'RASCUNHO';
 
+    // Resolve professionalId: explicit body > JWT userId > first available professional
+    let profId = data.professionalId as string | undefined;
+    if (profId) {
+      // Verify it exists as a User
+      const exists = await this.prisma.user.findUnique({ where: { id: profId }, select: { id: true } });
+      if (!exists) profId = undefined;
+    }
+    if (!profId) {
+      // Fallback: find the first professional (DENTISTA/HOF)
+      const prof = await this.prisma.user.findFirst({
+        where: { role: { in: ['DENTISTA', 'HOF'] as never[] } },
+        select: { id: true },
+      });
+      profId = prof?.id;
+    }
+    if (!profId) {
+      // Last resort: find any user
+      const any = await this.prisma.user.findFirst({ select: { id: true } });
+      profId = any?.id || '';
+    }
+
     return this.prisma.anamnesis.create({
       data: {
         patientId: data.patientId as string,
-        professionalId: data.professionalId as string,
+        professionalId: profId,
         filledAt: data.filledAt ? new Date(data.filledAt as string) : new Date(),
         data: normalizedData as any,
         status: status as never,
