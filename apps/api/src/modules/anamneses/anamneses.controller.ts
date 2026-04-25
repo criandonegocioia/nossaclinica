@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Param, Body, Query,
+  Controller, Get, Post, Patch, Delete, Param, Body, Query,
   UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { AnamnesesService } from './anamneses.service';
@@ -48,5 +48,11 @@ export class AnamnesesController {
   @Roles('ADMIN', 'DENTISTA', 'HOF')
   update(@Param('id') id: string, @Body() body: Record<string, unknown>) {
     return this.service.update(id, body);
+  }
+
+  @Delete(':id')
+  @Roles('ADMIN', 'DENTISTA')
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
   }
 }

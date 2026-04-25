@@ -167,4 +167,8 @@ export class AnamnesesService {
       },
     });
   }
+
+  async remove(id: string) {
+    return this.prisma.anamnesis.delete({ where: { id } });
+  }
 }

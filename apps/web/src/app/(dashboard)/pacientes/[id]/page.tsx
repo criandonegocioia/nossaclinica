@@ -7,15 +7,16 @@ import {
   ArrowLeft, Edit, FileText, Camera, FolderOpen, DollarSign,
   Stethoscope, Calendar, Phone, Mail, MapPin, Clock, Plus,
   ExternalLink, CheckCircle, Loader2, X, Save, Upload,
-  ChevronLeft, Banknote, Smartphone, CreditCard, Building2, Printer,
-  Heart, Pill, ClipboardList, Eye,
+  ChevronLeft, ChevronDown, Banknote, Smartphone, CreditCard, Building2, Printer,
+  Heart, Pill, ClipboardList, Eye, Trash2,
 } from 'lucide-react';
 import {
   usePatient, useUpdatePatient, useCreateMedicalRecord,
   useUploadPhoto, useCreateFinance, useCreateSchedule, useCreateAnamnesis,
   usePatientPhotos, useFinances, useMedicalRecords, useCreateDocument,
   useSchedules, useDocuments, useAnamneses, useMedications,
-  useUsers, useRooms, useProcedures, useUpdateAnamnesis
+  useUsers, useRooms, useProcedures, useUpdateAnamnesis,
+  useDeleteAnamnesis, useUpdateScheduleStatusMutation
 } from '@/hooks/useApi';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -1617,8 +1618,12 @@ export default function PatientDetailPage() {
   const [showNewDocument, setShowNewDocument] = useState(false);
   const [showNewAnamnesis, setShowNewAnamnesis] = useState(false);
   const [editingAnamnese, setEditingAnamnese] = useState<any | null>(null);
+  const [collapsedAnamneses, setCollapsedAnamneses] = useState<Set<string>>(new Set());
   const [showNewFinance, setShowNewFinance] = useState(false);
   const [showNewSchedule, setShowNewSchedule] = useState(false);
+  const [expandedSchedule, setExpandedSchedule] = useState<string | null>(null);
+  const deleteAnamnesis = useDeleteAnamnesis();
+  const updateScheduleStatus = useUpdateScheduleStatusMutation();
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading) {
@@ -1900,18 +1905,31 @@ export default function PatientDetailPage() {
                 </div></div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                  {[...anamneses].sort((a: any, b: any) => new Date(b.filledAt ?? b.createdAt ?? 0).getTime() - new Date(a.filledAt ?? a.createdAt ?? 0).getTime()).map((anamnese: any, index: number) => (
+                  {[...anamneses].sort((a: any, b: any) => new Date(b.filledAt ?? b.createdAt ?? 0).getTime() - new Date(a.filledAt ?? a.createdAt ?? 0).getTime()).map((anamnese: any, index: number) => {
+                    const isCollapsed = collapsedAnamneses.has(anamnese.id);
+                    const toggleCollapse = () => setCollapsedAnamneses(prev => {
+                      const next = new Set(prev);
+                      isCollapsed ? next.delete(anamnese.id) : next.add(anamnese.id);
+                      return next;
+                    });
+                    const handleDelete = async () => {
+                      if (!confirm('Excluir esta anamnese permanentemente?')) return;
+                      await deleteAnamnesis.mutateAsync({ id: anamnese.id, patientId: id });
+                    };
+                    return (
                     <div key={anamnese.id} className="card" style={{ animation: `fadeInUp 0.3s ease backwards ${index * 80}ms` }}>
                       <div className="card-body">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                            <CheckCircle size={16} style={{ color: 'var(--success-500)' }} />
+                        {/* Header row — always visible */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <button onClick={toggleCollapse} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, flex: 1, textAlign: 'left' }}>
+                            <CheckCircle size={16} style={{ color: 'var(--success-500)', flexShrink: 0 }} />
                             <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-900)', fontWeight: 'var(--font-medium)' }}>
                               Preenchida em: {fmtDate(String(anamnese.filledAt ?? anamnese.createdAt ?? ''))}
                             </span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                            {anamnese.status && <span className={`badge badge-dot ${anamnese.status === 'ASSINADO' ? 'badge-success' : 'badge-warning'}`}>{anamnese.status}</span>}
+                            <ChevronDown size={14} style={{ color: 'var(--gray-400)', marginLeft: 'var(--space-1)', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
+                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
+                            {anamnese.status && <span className={`badge badge-dot ${anamnese.status === 'PREENCHIDA' ? 'badge-success' : 'badge-warning'}`}>{anamnese.status}</span>}
                             {anamnese.status === 'RASCUNHO' ? (
                               <button className="btn btn-ghost btn-sm btn-icon" title="Editar rascunho" onClick={() => setEditingAnamnese(anamnese)}>
                                 <Edit size={14} />
@@ -1921,17 +1939,20 @@ export default function PatientDetailPage() {
                                 <ExternalLink size={14} />
                               </button>
                             )}
+                            <button className="btn btn-ghost btn-sm btn-icon" title="Excluir" onClick={handleDelete} style={{ color: 'var(--error-500)' }} disabled={deleteAnamnesis.isPending}>
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         </div>
-                        
+
+                        {/* Collapsible body */}
+                        {!isCollapsed && (
+                          <div style={{ marginTop: 'var(--space-3)' }}>
                         {(anamnese.data || anamnese.content) && typeof (anamnese.data || anamnese.content) === 'object' && (() => {
                           const raw = anamnese.data || anamnese.content;
                           const entries = Object.entries(raw);
-                          // Detect API format: {q01_xxx: {pergunta, resposta}} vs wizard format {key: value}
                           const isApiFormat = entries.length > 0 && typeof entries[0][1] === 'object' && entries[0][1] !== null && 'pergunta' in (entries[0][1] as Record<string, unknown>);
-                          
                           if (isApiFormat) {
-                            // Sort by key (q01, q02, ...) to ensure order
                             const sorted = entries.sort(([a], [b]) => a.localeCompare(b));
                             return (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: '1px solid var(--gray-100)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
@@ -1940,59 +1961,31 @@ export default function PatientDetailPage() {
                                   const isYes = resp === 'sim' || resp.startsWith('sim');
                                   const isNo = resp === 'nao' || resp === 'não' || resp.startsWith('nao') || resp.startsWith('não');
                                   return (
-                                    <div key={key} style={{
-                                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                      padding: 'var(--space-3) var(--space-4)',
-                                      background: i % 2 === 0 ? 'var(--gray-25)' : 'white',
-                                      borderBottom: i < sorted.length - 1 ? '1px solid var(--gray-50)' : 'none',
-                                    }}>
-                                      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-700)', flex: 1 }}>
-                                        {val.pergunta || key.replace(/_/g, ' ').replace(/^q\d+\s*/, '')}
-                                      </span>
-                                      <span style={{
-                                        fontSize: 'var(--text-xs)', fontWeight: 600,
-                                        padding: '2px 10px', borderRadius: 'var(--radius-full)',
-                                        background: isYes ? 'var(--warning-50, #fffbeb)' : isNo ? 'var(--success-50, #f0fdf4)' : 'var(--gray-100)',
-                                        color: isYes ? 'var(--warning-700, #a16207)' : isNo ? 'var(--success-700, #15803d)' : 'var(--gray-700)',
-                                      }}>
-                                        {String(val.resposta || '—')}
-                                      </span>
+                                    <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-3) var(--space-4)', background: i % 2 === 0 ? 'var(--gray-25)' : 'white', borderBottom: i < sorted.length - 1 ? '1px solid var(--gray-50)' : 'none' }}>
+                                      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-700)', flex: 1 }}>{val.pergunta || key.replace(/_/g, ' ').replace(/^q\d+\s*/, '')}</span>
+                                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, padding: '2px 10px', borderRadius: 'var(--radius-full)', background: isYes ? 'var(--warning-50, #fffbeb)' : isNo ? 'var(--success-50, #f0fdf4)' : 'var(--gray-100)', color: isYes ? 'var(--warning-700, #a16207)' : isNo ? 'var(--success-700, #15803d)' : 'var(--gray-700)' }}>{String(val.resposta || '—')}</span>
                                     </div>
                                   );
                                 })}
                               </div>
                             );
                           }
-                          
-                          // Wizard format: flat {key: boolean | string}
                           const LABELS: Record<string, string> = {
                             cardiopatia: 'Cardiopatia', hipertensao: 'Hipertensão', diabetes: 'Diabetes',
                             hepatite: 'Hepatite', hiv: 'HIV', gravidez: 'Gravidez', anemia: 'Anemia',
                             hemorragia: 'Hemorragias', convulsao: 'Convulsões', rinite: 'Rinite/Sinusite',
                             asma: 'Asma', febre_reumatica: 'Febre Reumática', pressao: 'Pressão Arterial',
-                            tipo_sanguineo: 'Tipo Sanguíneo', alergias: 'Alergias', medicamentos: 'Medicamentos',
-                            anticoagulante: 'Anticoagulante', suplementos: 'Suplementos',
+                            tipo_sanguineo: 'Tipo Sanguíneo', idade: 'Idade', alergias: 'Alergias',
+                            medicamentos: 'Medicamentos', anticoagulante: 'Anticoagulante', suplementos: 'Suplementos',
                             tabagismo: 'Tabagismo', etilismo: 'Etilismo', bruxismo: 'Bruxismo',
                             respiracao: 'Respiração', observacoes: 'Observações',
                           };
                           return (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: '1px solid var(--gray-100)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
                               {entries.filter(([k]) => !k.endsWith('_detail')).map(([key, val], i: number) => (
-                                <div key={key} style={{
-                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                  padding: 'var(--space-3) var(--space-4)',
-                                  background: i % 2 === 0 ? 'var(--gray-25)' : 'white',
-                                  borderBottom: '1px solid var(--gray-50)',
-                                }}>
-                                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-700)', flex: 1 }}>
-                                    {LABELS[key] || key.replace(/_/g, ' ')}
-                                  </span>
-                                  <span style={{
-                                    fontSize: 'var(--text-xs)', fontWeight: 600,
-                                    padding: '2px 10px', borderRadius: 'var(--radius-full)',
-                                    background: val === true ? 'var(--warning-50, #fffbeb)' : val === false ? 'var(--success-50, #f0fdf4)' : 'var(--gray-100)',
-                                    color: val === true ? 'var(--warning-700, #a16207)' : val === false ? 'var(--success-700, #15803d)' : 'var(--gray-700)',
-                                  }}>
+                                <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-3) var(--space-4)', background: i % 2 === 0 ? 'var(--gray-25)' : 'white', borderBottom: '1px solid var(--gray-50)' }}>
+                                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-700)', flex: 1 }}>{LABELS[key] || key.replace(/_/g, ' ')}</span>
+                                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, padding: '2px 10px', borderRadius: 'var(--radius-full)', background: val === true ? 'var(--warning-50, #fffbeb)' : val === false ? 'var(--success-50, #f0fdf4)' : 'var(--gray-100)', color: val === true ? 'var(--warning-700, #a16207)' : val === false ? 'var(--success-700, #15803d)' : 'var(--gray-700)' }}>
                                     {val === true ? 'Sim' : val === false ? 'Não' : String(val || '—')}
                                   </span>
                                 </div>
@@ -2001,13 +1994,14 @@ export default function PatientDetailPage() {
                           );
                         })()}
                         {!anamnese.data && !anamnese.content && (
-                           <div style={{ padding: 'var(--space-3)', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>
-                             Sem dados detalhados.
-                           </div>
+                           <div style={{ padding: 'var(--space-3)', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>Sem dados detalhados.</div>
+                        )}
+                          </div>
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </>
@@ -2103,10 +2097,17 @@ export default function PatientDetailPage() {
                       .trim();
                     const displayTitle = procName || cleanNotes || 'Consulta';
                     const statusBadge = displayStatus === 'AGENDADO' ? 'badge-primary' : displayStatus === 'CONFIRMADO' ? 'badge-success' : displayStatus === 'CONCLUIDO' ? 'badge-success' : displayStatus === 'CANCELADO' ? 'badge-error' : displayStatus === 'BLOQUEIO' ? 'badge-neutral' : 'badge-warning';
+                    const apptId = String(appt.id);
+                    const isExpanded = expandedSchedule === apptId;
+                    const room = (appt.room as any)?.name || '';
+                    const professional = (appt.professional as any)?.name || '';
+                    const durationMin = startAt && endAt ? Math.round((endAt.getTime() - startAt.getTime()) / 60000) : null;
+                    const canAct = !['CONCLUIDO', 'CANCELADO', 'FALTOU'].includes(displayStatus) && !isBlock;
                     return (
-                      <div key={String(appt.id)} className="card" style={{ animation: `fadeInUp 0.2s ease backwards ${i * 50}ms`, border: isUpcoming && !isBlock ? '1px solid var(--primary-200)' : undefined, opacity: isBlock ? 0.6 : 1 }}>
+                      <div key={apptId} className="card" style={{ animation: `fadeInUp 0.2s ease backwards ${i * 50}ms`, border: isUpcoming && !isBlock ? '1px solid var(--primary-200)' : undefined, opacity: isBlock ? 0.65 : 1 }}>
                         <div className="card-body" style={{ padding: 'var(--space-4)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          {/* Summary row — always visible */}
+                          <button onClick={() => setExpandedSchedule(isExpanded ? null : apptId)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
                               {startAt && (
                                 <div style={{ width: 48, minWidth: 48, height: 48, borderRadius: 'var(--radius-lg)', background: isUpcoming ? 'var(--primary-50)' : 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
@@ -2119,11 +2120,69 @@ export default function PatientDetailPage() {
                                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>
                                   {startAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                   {endAt && <> — {endAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</>}
+                                  {durationMin && <> · {durationMin}min</>}
                                 </div>
                               </div>
                             </div>
-                            <span className={`badge badge-dot ${statusBadge}`}>{displayStatus}</span>
-                          </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                              <span className={`badge badge-dot ${statusBadge}`}>{displayStatus}</span>
+                              <ChevronDown size={14} style={{ color: 'var(--gray-400)', transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s ease' }} />
+                            </div>
+                          </button>
+
+                          {/* Expanded detail */}
+                          {isExpanded && (
+                            <div style={{ marginTop: 'var(--space-4)', borderTop: '1px solid var(--gray-100)', paddingTop: 'var(--space-4)' }}>
+                              <div className="grid grid-2" style={{ gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+                                <div>
+                                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Horário</div>
+                                  <div style={{ fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <Clock size={13} style={{ color: 'var(--gray-400)' }} />
+                                    {startAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    {durationMin && ` · ${durationMin}min`}
+                                  </div>
+                                </div>
+                                {room && (
+                                  <div>
+                                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Sala</div>
+                                    <div style={{ fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <MapPin size={13} style={{ color: 'var(--gray-400)' }} /> {room}
+                                    </div>
+                                  </div>
+                                )}
+                                {professional && (
+                                  <div>
+                                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Profissional</div>
+                                    <div style={{ fontSize: 'var(--text-sm)' }}>Dra. {professional}</div>
+                                  </div>
+                                )}
+                                <div>
+                                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Status</div>
+                                  <span className={`badge badge-dot ${statusBadge}`}>{displayStatus}</span>
+                                </div>
+                              </div>
+                              {canAct && (
+                                <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                                  {displayStatus !== 'CONFIRMADO' && (
+                                    <button className="btn btn-primary btn-sm" style={{ flex: 1, minWidth: 120 }}
+                                      onClick={async () => { await updateScheduleStatus.mutateAsync({ id: apptId, status: 'CONFIRMADO' }); setExpandedSchedule(null); }}
+                                      disabled={updateScheduleStatus.isPending}>
+                                      <CheckCircle size={13} /> Confirmar
+                                    </button>
+                                  )}
+                                  <button className="btn btn-ghost btn-sm" style={{ flex: 1, minWidth: 100, border: '1px solid var(--gray-200)' }}
+                                    onClick={() => { setExpandedSchedule(null); setShowNewSchedule(true); }}>
+                                    <Calendar size={13} /> Reagendar
+                                  </button>
+                                  <button className="btn btn-ghost btn-sm" style={{ flex: 0, color: 'var(--error-600)', border: '1px solid var(--error-200)' }}
+                                    onClick={async () => { if (!confirm('Cancelar este agendamento?')) return; await updateScheduleStatus.mutateAsync({ id: apptId, status: 'CANCELADO' }); setExpandedSchedule(null); }}
+                                    disabled={updateScheduleStatus.isPending}>
+                                    <X size={13} /> Cancelar
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

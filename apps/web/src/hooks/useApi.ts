@@ -235,6 +235,32 @@ export function useUpdateAnamnesis() {
   });
 }
 
+export function useDeleteAnamnesis() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; patientId: string }) => {
+      const res = await api.delete(`/anamneses/${id}`);
+      return res.data;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['anamneses', vars.patientId] });
+    },
+  });
+}
+
+export function useUpdateScheduleStatusMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status, reason }: { id: string; status: string; reason?: string }) => {
+      const res = await api.patch(`/schedules/${id}/status`, { status, reason });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+    },
+  });
+}
+
 // =============================================
 // HOF Records Hooks
 // =============================================
