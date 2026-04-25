@@ -2099,88 +2099,98 @@ export default function PatientDetailPage() {
                     const statusBadge = displayStatus === 'AGENDADO' ? 'badge-primary' : displayStatus === 'CONFIRMADO' ? 'badge-success' : displayStatus === 'CONCLUIDO' ? 'badge-success' : displayStatus === 'CANCELADO' ? 'badge-error' : displayStatus === 'BLOQUEIO' ? 'badge-neutral' : 'badge-warning';
                     const apptId = String(appt.id);
                     const isExpanded = expandedSchedule === apptId;
-                    const room = (appt.room as any)?.name || '';
-                    const professional = (appt.professional as any)?.name || '';
+                    const room = (appt.room as any)?.name || '—';
+                    const professional = (appt.professional as any)?.name || '—';
+                    const patientName = (appt.patient as any)?.name || patient?.name || 'Bloqueio';
                     const durationMin = startAt && endAt ? Math.round((endAt.getTime() - startAt.getTime()) / 60000) : null;
-                    const canAct = !['CONCLUIDO', 'CANCELADO', 'FALTOU'].includes(displayStatus) && !isBlock;
+                    const canAct = !['CONCLUIDO', 'CANCELADO', 'FALTOU'].includes(displayStatus);
+                    const avatarInitials = patientName.split(' ').map((n: string) => n[0]).slice(0, 2).join('');
                     return (
-                      <div key={apptId} className="card" style={{ animation: `fadeInUp 0.2s ease backwards ${i * 50}ms`, border: isUpcoming && !isBlock ? '1px solid var(--primary-200)' : undefined, opacity: isBlock ? 0.65 : 1 }}>
-                        <div className="card-body" style={{ padding: 'var(--space-4)' }}>
-                          {/* Summary row — always visible */}
-                          <button onClick={() => setExpandedSchedule(isExpanded ? null : apptId)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-                              {startAt && (
-                                <div style={{ width: 48, minWidth: 48, height: 48, borderRadius: 'var(--radius-lg)', background: isUpcoming ? 'var(--primary-50)' : 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                                  <div style={{ fontSize: '14px', fontWeight: 'var(--font-bold)', color: isUpcoming ? 'var(--primary-700)' : 'var(--gray-500)', lineHeight: 1 }}>{startAt.getDate().toString().padStart(2, '0')}</div>
-                                  <div style={{ fontSize: '9px', color: isUpcoming ? 'var(--primary-500)' : 'var(--gray-400)' }}>{['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][startAt.getMonth()]}</div>
-                                </div>
-                              )}
-                              <div>
-                                <div style={{ fontWeight: 'var(--font-medium)', fontSize: 'var(--text-sm)' }}>{displayTitle}</div>
-                                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>
-                                  {startAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                  {endAt && <> — {endAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</>}
-                                  {durationMin && <> · {durationMin}min</>}
+                      <div key={apptId} className="card" style={{ animation: `fadeInUp 0.2s ease backwards ${i * 50}ms`, opacity: isBlock ? 0.65 : 1 }}>
+                        <div className="card-body">
+                          {/* Summary row — always visible, click to expand */}
+                          {!isExpanded ? (
+                            <button onClick={() => setExpandedSchedule(apptId)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                                {startAt && (
+                                  <div style={{ width: 48, minWidth: 48, height: 48, borderRadius: 'var(--radius-lg)', background: isUpcoming ? 'var(--primary-50)' : 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                                    <div style={{ fontSize: '14px', fontWeight: 'var(--font-bold)', color: isUpcoming ? 'var(--primary-700)' : 'var(--gray-500)', lineHeight: 1 }}>{startAt.getDate().toString().padStart(2, '0')}</div>
+                                    <div style={{ fontSize: '9px', color: isUpcoming ? 'var(--primary-500)' : 'var(--gray-400)' }}>{['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][startAt.getMonth()]}</div>
+                                  </div>
+                                )}
+                                <div>
+                                  <div style={{ fontWeight: 'var(--font-medium)', fontSize: 'var(--text-sm)' }}>{displayTitle}</div>
+                                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>
+                                    {startAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    {endAt && <> — {endAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</>}
+                                    {durationMin && <> · {durationMin}min</>}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                              <span className={`badge badge-dot ${statusBadge}`}>{displayStatus}</span>
-                              <ChevronDown size={14} style={{ color: 'var(--gray-400)', transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s ease' }} />
-                            </div>
-                          </button>
-
-                          {/* Expanded detail */}
-                          {isExpanded && (
-                            <div style={{ marginTop: 'var(--space-4)', borderTop: '1px solid var(--gray-100)', paddingTop: 'var(--space-4)' }}>
-                              <div className="grid grid-2" style={{ gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                                <span className={`badge badge-dot ${statusBadge}`}>{displayStatus}</span>
+                                <ChevronDown size={14} style={{ color: 'var(--gray-400)', transform: 'rotate(-90deg)', transition: 'transform 0.2s ease' }} />
+                              </div>
+                            </button>
+                          ) : (
+                            /* ── Expanded: identical layout to Agenda > Detalhes do Agendamento ── */
+                            <div style={{ animation: 'fadeIn 0.2s ease' }}>
+                              {/* Header */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+                                <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setExpandedSchedule(null)}><ChevronLeft size={18} /></button>
+                                <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 600 }}>Detalhes do Agendamento</h3>
+                              </div>
+                              {/* Avatar + name */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+                                <div className="avatar" style={{ width: 48, height: 48, fontSize: 'var(--text-base)' }}>{avatarInitials}</div>
                                 <div>
+                                  <div style={{ fontWeight: 600, color: 'var(--gray-900)' }}>{isBlock ? 'Bloqueio' : patientName}</div>
+                                  <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>{displayTitle}</div>
+                                </div>
+                              </div>
+                              {/* 4-field grid */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+                                <div style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-lg)' }}>
                                   <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Horário</div>
-                                  <div style={{ fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <Clock size={13} style={{ color: 'var(--gray-400)' }} />
-                                    {startAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                    {durationMin && ` · ${durationMin}min`}
+                                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <Clock size={14} /> {startAt?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}{durationMin ? ` · ${durationMin}min` : ''}
                                   </div>
                                 </div>
-                                {room && (
-                                  <div>
-                                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Sala</div>
-                                    <div style={{ fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                      <MapPin size={13} style={{ color: 'var(--gray-400)' }} /> {room}
-                                    </div>
+                                <div style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-lg)' }}>
+                                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Sala</div>
+                                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <MapPin size={14} /> {room}
                                   </div>
-                                )}
-                                {professional && (
-                                  <div>
-                                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Profissional</div>
-                                    <div style={{ fontSize: 'var(--text-sm)' }}>Dra. {professional}</div>
+                                </div>
+                                <div style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-lg)' }}>
+                                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Profissional</div>
+                                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <span>👤</span> {professional}
                                   </div>
-                                )}
-                                <div>
+                                </div>
+                                <div style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-lg)' }}>
                                   <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Status</div>
                                   <span className={`badge badge-dot ${statusBadge}`}>{displayStatus}</span>
                                 </div>
                               </div>
-                              {canAct && (
-                                <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                                  {displayStatus !== 'CONFIRMADO' && (
-                                    <button className="btn btn-primary btn-sm" style={{ flex: 1, minWidth: 120 }}
-                                      onClick={async () => { await updateScheduleStatus.mutateAsync({ id: apptId, status: 'CONFIRMADO' }); setExpandedSchedule(null); }}
-                                      disabled={updateScheduleStatus.isPending}>
-                                      <CheckCircle size={13} /> Confirmar
-                                    </button>
-                                  )}
-                                  <button className="btn btn-ghost btn-sm" style={{ flex: 1, minWidth: 100, border: '1px solid var(--gray-200)' }}
-                                    onClick={() => { setExpandedSchedule(null); setShowNewSchedule(true); }}>
-                                    <Calendar size={13} /> Reagendar
-                                  </button>
-                                  <button className="btn btn-ghost btn-sm" style={{ flex: 0, color: 'var(--error-600)', border: '1px solid var(--error-200)' }}
-                                    onClick={async () => { if (!confirm('Cancelar este agendamento?')) return; await updateScheduleStatus.mutateAsync({ id: apptId, status: 'CANCELADO' }); setExpandedSchedule(null); }}
-                                    disabled={updateScheduleStatus.isPending}>
-                                    <X size={13} /> Cancelar
-                                  </button>
-                                </div>
-                              )}
+                              {/* Action buttons */}
+                              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                <button className="btn btn-primary btn-sm" style={{ flex: 1 }}
+                                  onClick={async () => { await updateScheduleStatus.mutateAsync({ id: apptId, status: 'CONFIRMADO' }); setExpandedSchedule(null); }}
+                                  disabled={updateScheduleStatus.isPending || !canAct || displayStatus === 'CONFIRMADO'}>
+                                  <CheckCircle size={14} /> Confirmar
+                                </button>
+                                <button className="btn btn-secondary btn-sm" style={{ flex: 1 }}
+                                  onClick={() => { setExpandedSchedule(null); setShowNewSchedule(true); }}
+                                  disabled={!canAct}>
+                                  Reagendar
+                                </button>
+                                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--error-500)' }}
+                                  onClick={async () => { if (!confirm('Cancelar este agendamento?')) return; await updateScheduleStatus.mutateAsync({ id: apptId, status: 'CANCELADO' }); setExpandedSchedule(null); }}
+                                  disabled={updateScheduleStatus.isPending || !canAct}>
+                                  <X size={14} /> Cancelar
+                                </button>
+                              </div>
                             </div>
                           )}
                         </div>
