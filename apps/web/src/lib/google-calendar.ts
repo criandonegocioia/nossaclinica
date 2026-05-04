@@ -54,6 +54,26 @@ export async function getGoogleCalendarClient(userId: string) {
     }
   });
 
+  // Validate the credentials by attempting a token refresh.
+  // If the refresh_token is revoked or expired, clear the DB to force re-auth.
+  try {
+    await oauth2Client.getAccessToken();
+  } catch (err: any) {
+    const msg = err?.response?.data?.error ?? err?.message ?? '';
+    if (
+      typeof msg === 'string' &&
+      (msg.includes('invalid_grant') || msg.includes('invalid_token') || msg.includes('Token has been expired or revoked'))
+    ) {
+      console.warn(`[Google Calendar] Token revogado/expirado para userId=${userId}. Limpando credenciais.`);
+      await prisma.user.update({
+        where: { id: userId },
+        data: { googleAccessToken: null, googleRefreshToken: null },
+      });
+      throw new Error('TOKEN_REVOKED');
+    }
+    throw err;
+  }
+
   return google.calendar({ version: 'v3', auth: oauth2Client });
 }
 

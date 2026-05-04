@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Settings,
   User,
@@ -13,6 +13,10 @@ import {
   Camera,
   RefreshCw,
   Plug,
+  Wifi,
+  WifiOff,
+  QrCode,
+  Smartphone,
 } from 'lucide-react';
 import { useSettings, useUpdateSettings } from '@/hooks/useApi';
 import api from '@/lib/api';
@@ -27,11 +31,20 @@ const TABS = [
 ];
 
 
+// ── WhatsApp QR pairing state ────────────────────────────────────────────────
+type WaStatus = 'idle' | 'loading' | 'qr' | 'connected' | 'error';
+
 export default function ConfiguracoesPage() {
   const [activeTab, setActiveTab] = useState('clinic');
   const [localData, setLocalData] = useState<Record<string, unknown>>({});
   const [saved, setSaved] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [checkingGoogle, setCheckingGoogle] = useState(true);
+
+  // WhatsApp pairing
+  const [waStatus, setWaStatus] = useState<WaStatus>('idle');
+  const [waQr, setWaQr] = useState<string | null>(null);
+  const [waPhone, setWaPhone] = useState<string | null>(null);
 
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
@@ -41,17 +54,62 @@ export default function ConfiguracoesPage() {
     if (settings) setLocalData(settings as Record<string, unknown>);
   }, [settings]);
 
+  // Check real Google connection status on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       if (params.get('tab')) {
         setActiveTab(params.get('tab') as string);
       }
+      // Optimistic hint from callback redirect
       if (params.get('google_sync') === 'success') {
         setGoogleConnected(true);
+        setCheckingGoogle(false);
       }
     }
+    // Always verify with the backend (the query-string hint is just a flash)
+    api.get('/integrations/google/status')
+      .then((res) => {
+        setGoogleConnected(res.data?.connected === true);
+      })
+      .catch(() => {
+        setGoogleConnected(false);
+      })
+      .finally(() => setCheckingGoogle(false));
   }, []);
+
+  // WhatsApp: fetch QR from OpenClaw gateway
+  const fetchWaQr = useCallback(async () => {
+    const gatewayUrl = (localData?.integrations as Record<string, Record<string, string>>)?.openclaw?.agentApiUrl;
+    if (!gatewayUrl) { setWaStatus('error'); return; }
+    // Derive base URL: strip path after port
+    const base = gatewayUrl.replace(/\/v1\/.*$/, '');
+    setWaStatus('loading');
+    try {
+      const r = await fetch(`${base}/v1/channels/whatsapp/qr`, { headers: { 'x-api-key': (localData?.integrations as Record<string, Record<string, string>>)?.openclaw?.apiKey ?? '' } });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      if (d.status === 'connected') {
+        setWaStatus('connected');
+        setWaPhone(d.phone ?? null);
+        setWaQr(null);
+      } else if (d.qr) {
+        setWaStatus('qr');
+        setWaQr(d.qr);
+      } else {
+        setWaStatus('error');
+      }
+    } catch {
+      setWaStatus('error');
+    }
+  }, [localData]);
+
+  // Poll every 30s while QR is displayed
+  useEffect(() => {
+    if (waStatus !== 'qr') return;
+    const t = setInterval(fetchWaQr, 30_000);
+    return () => clearInterval(t);
+  }, [waStatus, fetchWaQr]);
 
   const handleChange = (section: string, key: string, value: unknown) => {
     setLocalData((prev) => ({
@@ -392,6 +450,90 @@ export default function ConfiguracoesPage() {
                      </div>
                   </div>
                 </div>
+
+                {/* WhatsApp QR Code Pairing */}
+                <div style={{ padding: 'var(--space-4)', border: `1px solid ${waStatus === 'connected' ? 'var(--success-300)' : 'var(--gray-200)'}`, borderRadius: 'var(--radius-lg)', background: waStatus === 'connected' ? 'var(--success-25, #f0fdf4)' : 'white' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      <QrCode size={18} style={{ color: waStatus === 'connected' ? 'var(--success-600)' : 'var(--gray-600)' }} />
+                      <h4 style={{ fontWeight: 'var(--font-semibold)', margin: 0 }}>WhatsApp via QR Code (OpenClaw)</h4>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      {waStatus === 'connected' && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-sm)', color: 'var(--success-600)', fontWeight: 'var(--font-medium)' }}>
+                          <Wifi size={14} /> Conectado{waPhone ? ` · ${waPhone}` : ''}
+                        </span>
+                      )}
+                      {waStatus === 'error' && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-sm)', color: 'var(--error-500)' }}>
+                          <WifiOff size={14} /> Desconectado
+                        </span>
+                      )}
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={fetchWaQr}
+                        disabled={waStatus === 'loading'}
+                        style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}
+                      >
+                        <RefreshCw size={13} style={{ animation: waStatus === 'loading' ? 'spin 1s linear infinite' : 'none' }} />
+                        {waStatus === 'idle' ? 'Gerar QR Code' : waStatus === 'loading' ? 'Aguardando...' : 'Atualizar'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {waStatus === 'idle' && (
+                    <div style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--gray-400)', fontSize: 'var(--text-sm)' }}>
+                      <Smartphone size={32} style={{ margin: '0 auto var(--space-2)', display: 'block', opacity: 0.4 }} />
+                      Clique em "Gerar QR Code" para parear o WhatsApp da clínica com a Clara.
+                    </div>
+                  )}
+
+                  {waStatus === 'loading' && (
+                    <div style={{ textAlign: 'center', padding: 'var(--space-6)' }}>
+                      <div className="spinner spinner-lg" style={{ margin: '0 auto var(--space-3)' }} />
+                      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>Conectando ao OpenClaw...</p>
+                    </div>
+                  )}
+
+                  {waStatus === 'qr' && waQr && (
+                    <div style={{ display: 'flex', gap: 'var(--space-6)', alignItems: 'flex-start' }}>
+                      <div style={{ flexShrink: 0 }}>
+                        <img
+                          src={waQr.startsWith('data:') ? waQr : `data:image/png;base64,${waQr}`}
+                          alt="WhatsApp QR Code"
+                          style={{ width: 180, height: 180, borderRadius: 'var(--radius-lg)', border: '4px solid var(--gray-100)' }}
+                        />
+                      </div>
+                      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', lineHeight: 1.6 }}>
+                        <p style={{ fontWeight: 'var(--font-semibold)', color: 'var(--gray-800)', marginBottom: 'var(--space-2)' }}>Como parear:</p>
+                        <ol style={{ paddingLeft: 'var(--space-4)', margin: 0 }}>
+                          <li>Abra o WhatsApp no celular da clínica</li>
+                          <li>Toque em <strong>⋮ Menu → Aparelhos conectados</strong></li>
+                          <li>Toque em <strong>Conectar um aparelho</strong></li>
+                          <li>Aponte a câmera para o QR Code ao lado</li>
+                        </ol>
+                        <p style={{ marginTop: 'var(--space-3)', color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>O QR atualiza automaticamente a cada 30 segundos.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {waStatus === 'connected' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--success-50)', borderRadius: 'var(--radius-md)' }}>
+                      <CheckCircle size={20} style={{ color: 'var(--success-600)', flexShrink: 0 }} />
+                      <div>
+                        <p style={{ fontWeight: 'var(--font-medium)', fontSize: 'var(--text-sm)', color: 'var(--success-800)' }}>WhatsApp conectado com sucesso!</p>
+                        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--success-600)' }}>A Clara está respondendo automaticamente pelo número da clínica.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {waStatus === 'error' && (
+                    <div style={{ padding: 'var(--space-3)', background: 'var(--error-50, #fef2f2)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', color: 'var(--error-700, #b91c1c)' }}>
+                      Não foi possível conectar ao OpenClaw. Verifique se o <strong>Gateway URL</strong> está correto e acessível.
+                    </div>
+                  )}
+                </div>
+
                 {/* Google Agenda */}
                 <div style={{ padding: 'var(--space-4)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-lg)' }}>
                   <h4 style={{ fontWeight: 'var(--font-semibold)', marginBottom: 'var(--space-2)' }}>Google Agenda</h4>
@@ -423,7 +565,9 @@ export default function ConfiguracoesPage() {
                      <button
                         className={googleConnected ? "btn btn-primary" : "btn btn-secondary"}
                         style={googleConnected ? { backgroundColor: 'var(--success-500)', borderColor: 'var(--success-500)', color: 'white' } : {}}
+                        disabled={checkingGoogle}
                         onClick={async () => {
+                           if (googleConnected) return; // Already connected, no-op
                            try {
                              const res = await api.get('/integrations/google/connect');
                              if (res.data?.url) {
@@ -435,8 +579,13 @@ export default function ConfiguracoesPage() {
                            }
                         }}
                      >
-                        {googleConnected ? <CheckCircle size={16} style={{ marginRight: 8 }} /> : <Plug size={16} style={{ marginRight: 8 }} />}
-                        {googleConnected ? 'Google Agenda Conectado' : 'Autorizar Google Agenda'}
+                        {checkingGoogle ? (
+                          <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2, marginRight: 8 }} /> Verificando...</>
+                        ) : googleConnected ? (
+                          <><CheckCircle size={16} style={{ marginRight: 8 }} /> Google Agenda Conectado</>
+                        ) : (
+                          <><Plug size={16} style={{ marginRight: 8 }} /> Autorizar Google Agenda</>
+                        )}
                      </button>
                   </div>
                 </div>

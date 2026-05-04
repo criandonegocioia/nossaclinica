@@ -45,13 +45,22 @@ export async function GET(request: NextRequest) {
     // Exchange the authorization code for an access token and a refresh token
     const { tokens } = await oauth2Client.getToken(code);
 
+    // Build update payload — NEVER overwrite an existing refresh_token with null.
+    // Google only sends refresh_token on the very first consent or when prompt=consent
+    // forces a new one. On subsequent authorizations it may be absent.
+    const updateData: Record<string, unknown> = {
+      googleAccessToken: tokens.access_token,
+    };
+
+    if (tokens.refresh_token) {
+      // Only overwrite when Google actually provides a new refresh token
+      updateData.googleRefreshToken = tokens.refresh_token;
+    }
+
     // Update the user's tokens in the database
     await prisma.user.update({
       where: { id: userId },
-      data: {
-        googleAccessToken: tokens.access_token,
-        googleRefreshToken: tokens.refresh_token, // This will only be present on the first authorization
-      },
+      data: updateData,
     });
 
     // Redirect the user back to the settings page with a success flag

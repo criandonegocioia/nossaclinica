@@ -518,8 +518,15 @@ export default function AgendaPage() {
   const dateStr = currentDate.toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
+  // Capitalize only the first letter (textTransform:capitalize would wrongly capitalize "de", "De")
+  const dateStrCapitalized = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
 
+  const todayStr = (() => {
+    const t = new Date();
+    return new Date(t.getTime() - (t.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+  })();
   const currentDayStr = new Date(currentDate.getTime() - (currentDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+  const isToday = currentDayStr === todayStr;
   
   const getWeekDates = (date: Date) => {
     const d = new Date(date);
@@ -634,7 +641,7 @@ export default function AgendaPage() {
               Agenda
             </span>
           </h1>
-          <p className="page-subtitle" style={{ textTransform: 'capitalize' }}>{dateStr}</p>
+          <p className="page-subtitle">{dateStrCapitalized}</p>
         </div>
         <div className="page-actions" style={{ display: 'flex', gap: 'var(--space-2)' }}>
           {view === 'calendar' && (
@@ -696,7 +703,7 @@ export default function AgendaPage() {
                   <button className="btn btn-ghost btn-sm btn-icon" onClick={() => navigateDay(-1)}>
                     <ChevronLeft size={18} />
                   </button>
-                  <button className="btn btn-sm btn-secondary" onClick={() => setCurrentDate(new Date())}>
+                  <button className={`btn btn-sm ${isToday ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setCurrentDate(new Date())}>
                     Hoje
                   </button>
                   <button className="btn btn-ghost btn-sm btn-icon" onClick={() => navigateDay(1)}>
