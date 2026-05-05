@@ -8,7 +8,7 @@ import {
   DollarSign, Stethoscope, Calendar, Phone, Mail,
   MapPin, Clock, Plus, Loader2, X, Save,
 } from 'lucide-react';
-import { usePatient, useUpdatePatient } from '@/hooks/useApi';
+import { usePatient } from '@/hooks/useApi';
 import { calcAge, initials, fmtCpf, fmtDate, Field, TabSkeleton } from '@/components/pacientes/shared/ui';
 import { GENDER_LABEL } from '@/components/pacientes/shared/types';
 
@@ -25,7 +25,7 @@ const AgendamentosTab = lazy(() => import('@/components/pacientes/agendamentos')
 // are still under active refactor. They will be split in a follow-up task.
 // See: components/pacientes/anamnese/NewAnamnesisInline.tsx (planned)
 //      components/pacientes/documentos/NewDocumentInline.tsx (planned)
-import { NewAnamnesisInline, NewDocumentInline } from './_legacy-forms';
+import { NewAnamnesisInline, NewDocumentInline, EditPatientInline } from './_legacy-forms';
 
 const TABS = [
   { id: 'prontuario',   label: 'Prontuário',  icon: FileText },
@@ -151,6 +151,11 @@ export default function PatientDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Edit Patient form ─────────────────────────────────────────── */}
+      {editing && (
+        <EditPatientInline patient={patient} onDone={() => setEditing(false)} />
+      )}
 
       {/* ── Tabs ──────────────────────────────────────────────────────────── */}
       <div className="tabs" style={{ marginBottom: 'var(--space-6)' }}>
