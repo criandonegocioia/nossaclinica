@@ -20,12 +20,10 @@ const AnamneseTab    = lazy(() => import('@/components/pacientes/anamnese'));
 const FinanceiroTab  = lazy(() => import('@/components/pacientes/financeiro'));
 const AgendamentosTab = lazy(() => import('@/components/pacientes/agendamentos'));
 
-// ── Heavy inline forms (kept here, not yet split) ─────────────────────────────
-// NewAnamnesisInline and NewDocumentInline remain in this file while they
-// are still under active refactor. They will be split in a follow-up task.
-// See: components/pacientes/anamnese/NewAnamnesisInline.tsx (planned)
-//      components/pacientes/documentos/NewDocumentInline.tsx (planned)
-import { NewAnamnesisInline, NewDocumentInline, EditPatientInline } from './_legacy-forms';
+// ── Heavy inline forms ────────────────────────────────────────────────────────
+import EditPatientInline from '@/components/pacientes/shared/EditPatientInline';
+import NewAnamnesisInline from '@/components/pacientes/anamnese/NewAnamnesisInline';
+import NewDocumentInline from '@/components/pacientes/documentos/forms/NewDocumentInline';
 
 const TABS = [
   { id: 'prontuario',   label: 'Prontuário',  icon: FileText },

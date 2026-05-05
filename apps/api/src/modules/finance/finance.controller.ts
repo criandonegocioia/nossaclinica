@@ -68,13 +68,13 @@ export class FinanceController {
   }
 
   @Post()
-  @Roles('ADMIN', 'FINANCEIRO')
+  @Roles('ADMIN', 'FINANCEIRO', 'RECEPCAO', 'DENTISTA')
   create(@Body(new ZodValidationPipe(CreateFinanceSchema)) body: CreateFinanceDto) {
     return this.financeService.create(body);
   }
 
   @Patch(':id/status')
-  @Roles('ADMIN', 'FINANCEIRO')
+  @Roles('ADMIN', 'FINANCEIRO', 'RECEPCAO', 'DENTISTA')
   updateStatus(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(UpdateStatusSchema)) body: UpdateStatusDto,

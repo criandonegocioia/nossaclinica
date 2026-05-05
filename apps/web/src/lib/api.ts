@@ -9,12 +9,17 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
  */
 export function getApiBaseUrl(): string {
   if (API_URL) return API_URL;
-  if (typeof window !== 'undefined') return window.location.origin;
-  return '';
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:3001';
+    }
+    return window.location.origin;
+  }
+  return 'http://localhost:3001';
 }
 
 export const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: `${getApiBaseUrl()}/api`,
   headers: { 'Content-Type': 'application/json' },
 });
 

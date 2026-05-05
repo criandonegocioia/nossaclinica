@@ -8,7 +8,10 @@ import type { TabComponentProps, Anamnesis } from '../shared/types';
 
 // ── Anamnesis detail viewer (read-only) ───────────────────────────────────────
 function AnamnesisBody({ anamnese }: { anamnese: Anamnesis }) {
-  const raw = anamnese.data || anamnese.content;
+  let raw = anamnese.data || anamnese.content;
+  if (typeof raw === 'string') {
+    try { raw = JSON.parse(raw); } catch (e) { /* ignore */ }
+  }
   if (!raw || typeof raw !== 'object') {
     return <div style={{ padding: 'var(--space-3)', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>Sem dados detalhados.</div>;
   }

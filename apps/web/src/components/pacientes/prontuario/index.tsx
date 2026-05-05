@@ -15,7 +15,17 @@ function NewRecordForm({ patientId, onDone }: { patientId: string; onDone: () =>
   const create = useCreateMedicalRecord();
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const save = async (isDraft: boolean) => {
-    await create.mutateAsync({ patientId, ...form, dateTime: new Date(form.dateTime).toISOString(), isDraft });
+    await create.mutateAsync({
+      patientId,
+      dateTime: new Date(form.dateTime).toISOString(),
+      procedures: form.procedures,
+      complaint: form.complaint,
+      diagnosis: form.diagnosis,
+      treatmentPlan: form.treatment,
+      prescriptions: form.prescription,
+      orientations: form.notes,
+      isDraft
+    });
     onDone();
   };
   return (
@@ -89,11 +99,12 @@ function RecordCard({ record, isExpanded, onToggle }: { record: MedicalRecord; i
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
               {([
-                { k: 'complaint',    label: 'Queixa Principal' },
-                { k: 'diagnosis',    label: 'Diagnóstico' },
-                { k: 'treatment',    label: 'Tratamento / Evolução' },
-                { k: 'prescription', label: 'Prescrição / Receita', pre: true },
-                { k: 'notes',        label: 'Observações Internas' },
+                { k: 'complaint',       label: 'Queixa Principal' },
+                { k: 'diagnosis',       label: 'Diagnóstico' },
+                { k: 'treatmentPlan',   label: 'Tratamento / Evolução' },
+                { k: 'prescriptions',   label: 'Prescrição / Receita', pre: true },
+                { k: 'orientations',    label: 'Observações / Orientações' },
+                { k: 'complications',   label: 'Intercorrências' },
               ] as { k: keyof MedicalRecord; label: string; pre?: boolean }[]).map(({ k, label, pre }) =>
                 record[k] ? (
                   <div key={k} style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-lg)' }}>
