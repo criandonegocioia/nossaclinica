@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { AuditInterceptor } from '../../common/interceptors/audit.interceptor';
+import { Public } from '../../common/decorators/public.decorator';
 
 @Controller('documents')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -34,8 +35,8 @@ export class DocumentsController {
     return this.documentsService.create(createDocumentDto);
   }
 
+  @Public()
   @Get(':id/pdf')
-  @Roles('ADMIN', 'DENTISTA', 'HOF', 'RECEPCAO')
   generatePdf(@Param('id') id: string, @Res() res: Response) {
     return this.documentsService.generatePdf(id, res);
   }
