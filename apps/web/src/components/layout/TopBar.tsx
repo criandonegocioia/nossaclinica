@@ -27,9 +27,16 @@ export function TopBar() {
 
   // Build breadcrumb from pathname
   const segments = pathname.split('/').filter(Boolean);
-  const breadcrumbs = segments.map((_, index) => {
+  const breadcrumbs = segments.map((seg, index) => {
     const path = '/' + segments.slice(0, index + 1).join('/');
-    return { path, label: ROUTE_LABELS[path] || segments[index] };
+    // Try to resolve dynamic segment labels from sessionStorage
+    let label = ROUTE_LABELS[path];
+    if (!label) {
+      // Check if this segment looks like a DB id and has a stored human label
+      const stored = typeof window !== 'undefined' ? sessionStorage.getItem(`breadcrumb:${seg}`) : null;
+      label = stored || ROUTE_LABELS['/' + seg] || seg;
+    }
+    return { path, label };
   });
 
   return (

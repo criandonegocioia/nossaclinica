@@ -128,7 +128,7 @@ export default function PacientesPage() {
                     </Link>
                   </td>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
-                    {patient.cpf || '—'}
+                    {patient.cpf ? (() => { const c = String(patient.cpf).replace(/\D/g,''); return c.length===11 ? `${c.slice(0,3)}.${c.slice(3,6)}.${c.slice(6,9)}-${c.slice(9)}` : patient.cpf; })() : '—'}
                   </td>
                   <td>
                     {patient.phoneMain ? (

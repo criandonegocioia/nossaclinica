@@ -40,6 +40,13 @@ const PAYMENT_LABELS: Record<string, string> = {
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+function fmtCpf(cpf: string | null | undefined): string {
+  if (!cpf) return '—';
+  const clean = String(cpf).replace(/\D/g, '');
+  if (clean.length !== 11) return String(cpf);
+  return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6, 9)}-${clean.slice(9)}`;
+}
+
 function calcAge(birthDate: string | null) {
   if (!birthDate) return null;
   const birth = new Date(birthDate);
@@ -1660,6 +1667,19 @@ export default function PatientDetailPage() {
   
   const counters = patient._count ?? {};
 
+  // Computed financial totals
+  const totalPago = finances.filter((f: any) => f.status === 'PAGO').reduce((s: number, f: any) => s + Number(f.amount || 0), 0);
+  const totalPendente = finances.filter((f: any) => f.status === 'PENDENTE').reduce((s: number, f: any) => s + Number(f.amount || 0), 0);
+  const totalGeral = finances.reduce((s: number, f: any) => s + Number(f.amount || 0), 0);
+
+  // Deduplicate schedules by id
+  const uniqueSchedules = Array.from(new Map(schedules.map((s: any) => [s.id, s])).values());
+
+  // Save patient name in sessionStorage so TopBar breadcrumb can resolve the id
+  if (typeof window !== 'undefined' && patient?.name && id) {
+    sessionStorage.setItem(`breadcrumb:${id}`, patient.name as string);
+  }
+
   return (
     <>
       <div style={{ marginBottom: 'var(--space-6)' }}>
@@ -1683,7 +1703,7 @@ export default function PatientDetailPage() {
                     <div style={{ display: 'flex', gap: 'var(--space-3)', fontSize: 'var(--text-sm)', color: 'var(--gray-500)', flexWrap: 'wrap' }}>
                       {age !== null && <span>{age} anos</span>}
                       {patient.gender && patient.gender !== 'NAO_INFORMADO' && <span>• {gender}</span>}
-                      {patient.cpf && <span>CPF: {patient.cpf}</span>}
+                      {patient.cpf && <span>CPF: {fmtCpf(patient.cpf as string)}</span>}
                       {patient.birthDate && <span>Nasc: {new Date(patient.birthDate as string).toLocaleDateString('pt-BR')}</span>}
                     </div>
                     <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', flexWrap: 'wrap' }}>
@@ -1730,10 +1750,25 @@ export default function PatientDetailPage() {
       <div className="tabs" style={{ marginBottom: 'var(--space-6)' }}>
         {TABS.map((tab) => {
           const Icon = tab.icon;
+          // Badge counts per tab
+          const tabCounts: Record<string, number> = {
+            prontuario: records.length,
+            fotos: photos.length,
+            documentos: documents.length,
+            anamnese: anamneses.length,
+            financeiro: finances.length,
+            agendamentos: uniqueSchedules.filter((s: any) => !['CONCLUIDO', 'CANCELADO', 'FALTOU'].includes(String(s.status))).length,
+          };
+          const count = tabCounts[tab.id] ?? 0;
           return (
             <button key={tab.id} className={`tab ${activeTab === tab.id ? 'active' : ''}`}
               onClick={() => { setActiveTab(tab.id); setShowNewRecord(false); setShowUploadPhoto(false); setShowNewDocument(false); setShowNewAnamnesis(false); setShowNewFinance(false); setShowNewSchedule(false); }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}><Icon size={15} /> {tab.label}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <Icon size={15} /> {tab.label}
+                {count > 0 && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, borderRadius: '9px', background: activeTab === tab.id ? 'var(--primary-600)' : 'var(--gray-200)', color: activeTab === tab.id ? 'white' : 'var(--gray-600)', fontSize: '10px', fontWeight: 600, padding: '0 4px' }}>{count}</span>
+                )}
+              </span>
             </button>
           );
         })}
@@ -2016,12 +2051,29 @@ export default function PatientDetailPage() {
             <NewFinanceInline patientId={id} onDone={() => setShowNewFinance(false)} />
           ) : (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
                 <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)' }}>Histórico Financeiro</h3>
-                {finances.length > 0 && (
-                  <button className="btn btn-primary btn-sm" onClick={() => setShowNewFinance(true)}><Plus size={14} /> Novo Lançamento</button>
-                )}
+                <button className="btn btn-primary btn-sm" onClick={() => setShowNewFinance(true)}><Plus size={14} /> Novo Lançamento</button>
               </div>
+
+              {/* Financial summary cards */}
+              {finances.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
+                  <div style={{ background: 'var(--success-50, #f0fdf4)', border: '1px solid var(--success-200, #bbf7d0)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--success-600)', textTransform: 'uppercase', marginBottom: 4 }}>Total Pago</div>
+                    <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--success-700)' }}>R$ {totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                  </div>
+                  <div style={{ background: 'var(--warning-50, #fffbeb)', border: '1px solid var(--warning-200, #fde68a)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--warning-600)', textTransform: 'uppercase', marginBottom: 4 }}>Pendente</div>
+                    <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--warning-700)' }}>R$ {totalPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                  </div>
+                  <div style={{ background: 'var(--primary-50)', border: '1px solid var(--primary-200, #99f6e4)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--primary-600)', textTransform: 'uppercase', marginBottom: 4 }}>Total Geral</div>
+                    <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--primary-700)' }}>R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                  </div>
+                </div>
+              )}
+
               {finances.length === 0 ? (
                 <div className="card"><div className="card-body" style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--gray-400)' }}>
                   <DollarSign size={32} style={{ margin: '0 auto var(--space-3)', opacity: 0.3 }} />
@@ -2060,21 +2112,44 @@ export default function PatientDetailPage() {
             <NewScheduleInline patientId={id} patientName={patient.name as string} onDone={() => setShowNewSchedule(false)} />
           ) : (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
                 <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)' }}>Agendamentos</h3>
-                {schedules.length > 0 && (
+                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {/* Status filter pills */}
+                  {uniqueSchedules.length > 0 && (['TODOS', 'AGENDADO', 'CONFIRMADO', 'CONCLUIDO', 'CANCELADO'] as const).map((f) => {
+                    const isActive = (expandedSchedule === null && f === 'TODOS') || expandedSchedule === `filter:${f}`;
+                    const count = f === 'TODOS' ? uniqueSchedules.length : uniqueSchedules.filter((s: any) => String(s.status) === f || (f === 'AGENDADO' && s.isBlock !== true && String(s.status) === 'BLOQUEIO')).length;
+                    return (
+                      <button key={f}
+                        className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-ghost'}`}
+                        style={{ fontSize: '11px' }}
+                        onClick={() => setExpandedSchedule(f === 'TODOS' ? null : `filter:${f}`)}
+                      >
+                        {f === 'TODOS' ? 'Todos' : f === 'AGENDADO' ? 'Agendado' : f === 'CONFIRMADO' ? 'Confirmado' : f === 'CONCLUIDO' ? 'Concluído' : 'Cancelado'}
+                        {count > 0 && <span style={{ marginLeft: 4, opacity: 0.7 }}>({count})</span>}
+                      </button>
+                    );
+                  })}
                   <button className="btn btn-primary btn-sm" onClick={() => setShowNewSchedule(true)}><Plus size={14} /> Novo Agendamento</button>
-                )}
+                </div>
               </div>
-              {schedules.length === 0 ? (
+              {uniqueSchedules.length === 0 ? (
                 <div className="card"><div className="card-body" style={{ textAlign: 'center', padding: 'var(--space-10)', color: 'var(--gray-400)' }}>
                   <Calendar size={32} style={{ margin: '0 auto var(--space-3)', opacity: 0.3 }} />
                   <p style={{ fontSize: 'var(--text-sm)' }}>Nenhum agendamento encontrado</p>
                   <button className="btn btn-primary btn-sm" style={{ marginTop: 'var(--space-4)' }} onClick={() => setShowNewSchedule(true)}><Plus size={14} /> Realizar Agendamento</button>
                 </div></div>
-              ) : (
+              ) : (() => {
+                // Apply status filter
+                const activeFilter = expandedSchedule?.startsWith('filter:') ? expandedSchedule.replace('filter:', '') : null;
+                const filtered: any[] = (activeFilter ? uniqueSchedules.filter((s: any) => {
+                  const st = String(s.status);
+                  if (activeFilter === 'AGENDADO') return st === 'AGENDADO' || (st === 'BLOQUEIO' && s.isBlock !== true);
+                  return st === activeFilter;
+                }) : uniqueSchedules) as any[];
+                return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                  {schedules.map((appt: Record<string, unknown>, i: number) => {
+                  {filtered.map((appt: Record<string, unknown>, i: number) => {
                     const rawStatus = String(appt.status);
                     const isBlock = appt.isBlock === true;
                     const displayStatus = isBlock ? 'BLOQUEIO' : rawStatus === 'BLOQUEIO' ? 'AGENDADO' : rawStatus;
@@ -2198,7 +2273,8 @@ export default function PatientDetailPage() {
                     );
                   })}
                 </div>
-              )}
+                );
+              })()}
             </>
           )}
         </div>
