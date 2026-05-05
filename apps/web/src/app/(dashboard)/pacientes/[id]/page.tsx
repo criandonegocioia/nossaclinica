@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getApiBaseUrl } from '@/lib/api';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
@@ -1845,8 +1846,7 @@ export default function PatientDetailPage() {
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 'var(--space-4)' }}>
                   {photos.map((p: Record<string, unknown>, i: number) => {
-                    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-                    const src = p.url ? String(p.url) : `${apiUrl}/api/photos/${p.id}/content`;
+                    const src = p.url ? String(p.url) : `${getApiBaseUrl()}/api/photos/${p.id}/content`;
                     return (
                       <div key={String(p.id)} style={{ position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden', aspectRatio: '1', background: 'var(--gray-100)', animation: `fadeIn 0.3s ease backwards ${i * 50}ms` }}>
                         <img src={src} alt={String(p.title ?? 'Foto')} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1902,7 +1902,7 @@ export default function PatientDetailPage() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                           <span className={`badge badge-dot ${doc.status === 'ASSINADO' ? 'badge-success' : 'badge-warning'}`}>{doc.status === 'ASSINADO' ? 'Assinado' : 'Pendente'}</span>
-                          <a href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/documents/${doc.id}/pdf`} target="_blank" className="btn btn-ghost btn-sm btn-icon" title="Imprimir / Baixar">
+                          <a href={`${getApiBaseUrl()}/api/documents/${doc.id}/pdf`} target="_blank" className="btn btn-ghost btn-sm btn-icon" title="Imprimir / Baixar">
                             <Printer size={16} />
                           </a>
                         </div>

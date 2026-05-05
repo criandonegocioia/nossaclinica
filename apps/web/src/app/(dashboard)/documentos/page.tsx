@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { useDocuments, usePatients } from '@/hooks/useApi';
+import { getApiBaseUrl } from '@/lib/api';
 
 // ── Document template definitions ─────────────────────────────────────────────
 const DOC_TEMPLATES = [
@@ -284,7 +285,7 @@ export default function DocumentosPage() {
   const meta = documents?.meta;
 
   const handleDownloadPdf = (id: string) => {
-    window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/documents/${id}/pdf`, '_blank');
+    window.open(`${getApiBaseUrl()}/api/documents/${id}/pdf`, '_blank');
   };
 
   const handleSelectTemplate = (id: string) => {
@@ -509,7 +510,7 @@ export default function DocumentosPage() {
                             <Download size={14} />
                           </button>
                           <a
-                            href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/documents/${doc.id}/pdf`}
+                            href={`${getApiBaseUrl()}/api/documents/${doc.id}/pdf`}
                             target="_blank"
                             rel="noreferrer"
                             className="btn btn-ghost btn-icon btn-sm"

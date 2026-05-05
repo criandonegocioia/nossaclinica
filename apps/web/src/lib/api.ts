@@ -2,6 +2,17 @@ import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
+/**
+ * Returns an absolute base URL for direct browser links (PDFs, photos, etc.)
+ * - If NEXT_PUBLIC_API_URL is set (e.g. separate API domain) → use it
+ * - Otherwise fall back to the current origin (same-domain deploy on Vercel)
+ */
+export function getApiBaseUrl(): string {
+  if (API_URL) return API_URL;
+  if (typeof window !== 'undefined') return window.location.origin;
+  return '';
+}
+
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
   headers: { 'Content-Type': 'application/json' },
