@@ -44,7 +44,7 @@ export default function NewFinanceInline({ patientId, onDone }: { patientId: str
 
   const handleSave = async () => {
     const total = getTotal();
-    const procNames = selectedProcs.map(p => p.name).join(' + ');
+    const procNames = selectedProcs.map(p => `${p.name} (R$ ${p.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`).join(' + ');
     const desc = customDescription 
       ? (procNames ? `${procNames} - ${customDescription}` : customDescription)
       : procNames;
