@@ -506,6 +506,8 @@ model Finance {
   paidBy          User?         @relation(fields: [paidById], references: [id])
   paidById        String?       @map("paid_by_id")
   notes           String?
+  canceledAt      DateTime?     @map("canceled_at")
+  cancelReason    String?       @map("cancel_reason")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 

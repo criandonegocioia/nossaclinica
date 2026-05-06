@@ -35,6 +35,8 @@ const UpdateStatusSchema = z.object({
     'DINHEIRO', 'CARTAO_CREDITO', 'CARTAO_DEBITO', 'PIX',
     'TRANSFERENCIA', 'BOLETO', 'CONVENIO', 'OUTRO',
   ]).optional(),
+  canceledAt: z.string().datetime().optional(),
+  cancelReason: z.string().optional(),
 });
 type UpdateStatusDto = z.infer<typeof UpdateStatusSchema>;
 
@@ -79,7 +81,7 @@ export class FinanceController {
     @Param('id') id: string,
     @Body(new ZodValidationPipe(UpdateStatusSchema)) body: UpdateStatusDto,
   ) {
-    return this.financeService.updateStatus(id, body as { status: string; paidAt?: string; paymentMethod?: string });
+    return this.financeService.updateStatus(id, body as { status: string; paidAt?: string; paymentMethod?: string; canceledAt?: string; cancelReason?: string });
   }
 }
 

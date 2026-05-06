@@ -368,7 +368,14 @@ export function useCreateFinance() {
 export function useUpdateFinanceStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; status: string; paidAt?: string; paymentMethod?: string }) => {
+    mutationFn: async ({ id, ...data }: {
+      id: string;
+      status: string;
+      paidAt?: string;
+      paymentMethod?: string;
+      canceledAt?: string;
+      cancelReason?: string;
+    }) => {
       const res = await api.patch(`/finances/${id}/status`, data);
       return res.data;
     },

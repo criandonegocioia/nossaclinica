@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, DollarSign, Banknote, Smartphone, CreditCard, Building2, ChevronDown, ChevronLeft, CheckCircle } from 'lucide-react';
-import { useFinances } from '@/hooks/useApi';
+import { Plus, DollarSign, Banknote, Smartphone, CreditCard, Building2, ChevronDown, ChevronLeft, Pencil, XCircle } from 'lucide-react';
+import { useFinances, useUpdateFinanceStatus } from '@/hooks/useApi';
 import { EmptyState } from '../shared/ui';
 import { PAYMENT_LABELS } from '../shared/types';
 import type { TabComponentProps, Finance } from '../shared/types';
 import NovoLancamentoForm from './novo-lancamento/NovoLancamentoForm';
 
-// ── Payment method icon ────────────────────────────────────────────────────────
 function PaymentIcon({ method }: { method: string }) {
   const m = method?.toUpperCase();
   if (m === 'PIX') return <Smartphone size={14} />;
@@ -18,15 +17,103 @@ function PaymentIcon({ method }: { method: string }) {
   return <DollarSign size={14} />;
 }
 
-// ── Finance Card ──────────────────────────────────────────────────────────────
-function FinanceCard({ fin, isExpanded, onToggle }: { fin: Finance; isExpanded: boolean; onToggle: () => void }) {
-  const isReceived = fin.type === 'RECEBIMENTO' || !fin.type; // default to recebimento Se estiver faltando
-  const color = isReceived ? 'var(--success-600)' : 'var(--error-600)';
-  const dateStr = fin.dueDate ? new Date(fin.dueDate).toLocaleDateString('pt-BR') : '';
-  const statusBadge = fin.status === 'PAGO' ? 'badge-success' : fin.status === 'CANCELADO' ? 'badge-secondary' : 'badge-warning';
+const STATUS_BADGE: Record<string, string> = {
+  PAGO: 'badge-success', CANCELADO: 'badge-error',
+  ATRASADO: 'badge-error', ESTORNADO: 'badge-neutral', PENDENTE: 'badge-warning',
+};
+
+// ── Edit Panel (status only) ──────────────────────────────────────────────────
+function EditPanel({ fin, onClose }: { fin: Finance; onClose: () => void }) {
+  const update = useUpdateFinanceStatus();
+  const [status, setStatus] = useState(fin.status);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    await update.mutateAsync({ id: fin.id, status,
+      ...(status === 'PAGO' && !fin.paidAt ? { paidAt: new Date().toISOString() } : {}),
+    });
+    setSaving(false);
+    onClose();
+  };
 
   return (
-    <div className="card" style={{ opacity: fin.status === 'CANCELADO' ? 0.65 : 1 }}>
+    <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-4)', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--gray-200)', display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-end' }}>
+      <div className="input-group" style={{ margin: 0, flex: 1 }}>
+        <label className="input-label">Novo status</label>
+        <select className="input" value={status} onChange={(e) => setStatus(e.target.value as Finance['status'])}>
+          <option value="PENDENTE">Pendente</option>
+          <option value="PAGO">Pago</option>
+          <option value="ATRASADO">Atrasado</option>
+          <option value="ESTORNADO">Estornado</option>
+        </select>
+      </div>
+      <button className="btn btn-primary btn-sm" onClick={save} disabled={saving || status === fin.status}>
+        {saving ? 'Salvando...' : 'Confirmar'}
+      </button>
+      <button className="btn btn-ghost btn-sm" onClick={onClose}>Cancelar</button>
+    </div>
+  );
+}
+
+// ── Cancel Panel ──────────────────────────────────────────────────────────────
+function CancelPanel({ fin, onClose }: { fin: Finance; onClose: () => void }) {
+  const update = useUpdateFinanceStatus();
+  const [reason, setReason] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [saving, setSaving] = useState(false);
+
+  const confirm = async () => {
+    if (!reason.trim()) return;
+    setSaving(true);
+    await update.mutateAsync({
+      id: fin.id, status: 'CANCELADO',
+      canceledAt: new Date(date + 'T12:00:00').toISOString(),
+      cancelReason: reason.trim(),
+    });
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-4)', background: 'var(--error-50, #fff1f2)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--error-200, #fecdd3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+      <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--error-700, #b91c1c)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+        <XCircle size={14} /> Cancelar lançamento
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 'var(--space-3)' }}>
+        <div className="input-group" style={{ margin: 0 }}>
+          <label className="input-label">Data do cancelamento</label>
+          <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
+        <div className="input-group" style={{ margin: 0 }}>
+          <label className="input-label required">Motivo do cancelamento</label>
+          <input className="input" value={reason} onChange={(e) => setReason(e.target.value)}
+            placeholder="Ex: Paciente desistiu, erro de lançamento..." />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
+        <button className="btn btn-ghost btn-sm" onClick={onClose}>Voltar</button>
+        <button className="btn btn-sm" disabled={!reason.trim() || saving}
+          style={{ background: 'var(--error-600, #dc2626)', color: '#fff', border: 'none' }}
+          onClick={confirm}>
+          {saving ? 'Cancelando...' : 'Confirmar cancelamento'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Finance Card ──────────────────────────────────────────────────────────────
+function FinanceCard({ fin, isExpanded, onToggle }: { fin: Finance; isExpanded: boolean; onToggle: () => void }) {
+  const [panel, setPanel] = useState<'none' | 'edit' | 'cancel'>('none');
+  const isCanceled = fin.status === 'CANCELADO';
+  const color = fin.type === 'DESPESA' ? 'var(--error-600)' : 'var(--success-600)';
+  const dateStr = fin.dueDate ? new Date(fin.dueDate).toLocaleDateString('pt-BR') : '';
+
+  const closePanel = () => setPanel('none');
+
+  return (
+    <div className="card" style={{ opacity: isCanceled ? 0.7 : 1 }}>
       <div className="card-body">
         {!isExpanded ? (
           <button onClick={onToggle} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
@@ -41,40 +128,65 @@ function FinanceCard({ fin, isExpanded, onToggle }: { fin: Finance; isExpanded: 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
               <div style={{ textAlign: 'right' }}>
-                <span className={`badge badge-dot ${statusBadge}`}>{fin.status}</span>
-                {dateStr && <div style={{ fontSize: 10, color: 'var(--gray-400)', marginTop: 4 }}>Vencimento: {dateStr}</div>}
+                <span className={`badge badge-dot ${STATUS_BADGE[fin.status] ?? 'badge-warning'}`}>{fin.status}</span>
+                {dateStr && <div style={{ fontSize: 10, color: 'var(--gray-400)', marginTop: 4 }}>Vcto: {dateStr}</div>}
               </div>
               <ChevronDown size={14} style={{ color: 'var(--gray-400)', transform: 'rotate(-90deg)' }} />
             </div>
           </button>
         ) : (
           <div style={{ animation: 'fadeIn 0.2s ease' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
-              <button className="btn btn-ghost btn-sm btn-icon" onClick={onToggle}><ChevronLeft size={18} /></button>
-              <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 600 }}>Detalhes do Lançamento</h3>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-5)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <button className="btn btn-ghost btn-sm btn-icon" onClick={onToggle}><ChevronLeft size={18} /></button>
+                <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 600 }}>Detalhes do Lançamento</h3>
+              </div>
+              {!isCanceled && (
+                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setPanel(panel === 'edit' ? 'none' : 'edit')}
+                    style={{ color: 'var(--primary-600)' }}>
+                    <Pencil size={13} /> Editar status
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setPanel(panel === 'cancel' ? 'none' : 'cancel')}
+                    style={{ color: 'var(--error-600, #dc2626)' }}>
+                    <XCircle size={13} /> Cancelar
+                  </button>
+                </div>
+              )}
             </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-3)', marginBottom: 'var(--space-5)' }}>
-              <div style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-lg)' }}>
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Valor</div>
-                <div style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color }}>R$ {Number(fin.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-              </div>
-              <div style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-lg)' }}>
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Status</div>
-                <span className={`badge badge-dot ${statusBadge}`}>{fin.status}</span>
-              </div>
+
+            {/* Detail Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+              {[
+                { label: 'Valor', content: <span style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color }}>{`R$ ${Number(fin.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}</span> },
+                { label: 'Status', content: <span className={`badge badge-dot ${STATUS_BADGE[fin.status] ?? 'badge-warning'}`}>{fin.status}</span> },
+              ].map(({ label, content }) => (
+                <div key={label} style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-lg)' }}>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>{label}</div>
+                  {content}
+                </div>
+              ))}
               <div style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-lg)', gridColumn: 'span 2' }}>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Descrição</div>
                 <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-800)' }}>{fin.description}</div>
               </div>
               <div style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-lg)' }}>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Forma de Pagamento</div>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>{PAYMENT_LABELS[fin.paymentMethod || ''] || fin.paymentMethod}</div>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>{PAYMENT_LABELS[fin.paymentMethod || ''] || fin.paymentMethod || '—'}</div>
               </div>
               <div style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-lg)' }}>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Vencimento / Pago em</div>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>{dateStr || '—'} {fin.paidAt ? ` / ${new Date(fin.paidAt).toLocaleDateString('pt-BR')}` : ''}</div>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>{dateStr || '—'}{fin.paidAt ? ` / ${new Date(fin.paidAt).toLocaleDateString('pt-BR')}` : ''}</div>
               </div>
+              {fin.canceledAt && (
+                <div style={{ padding: 'var(--space-3)', background: 'var(--error-50, #fff1f2)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--error-200, #fecdd3)', gridColumn: 'span 2' }}>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--error-600)', marginBottom: 2, fontWeight: 600 }}>Cancelamento</div>
+                  <div style={{ fontSize: 'var(--text-sm)', color: 'var(--error-800, #991b1b)' }}>
+                    📅 {new Date(fin.canceledAt).toLocaleDateString('pt-BR')} — {fin.cancelReason}
+                  </div>
+                </div>
+              )}
               {fin.notes && (
                 <div style={{ padding: 'var(--space-3)', background: 'var(--gray-25)', borderRadius: 'var(--radius-lg)', gridColumn: 'span 2' }}>
                   <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 2 }}>Observações</div>
@@ -82,6 +194,10 @@ function FinanceCard({ fin, isExpanded, onToggle }: { fin: Finance; isExpanded: 
                 </div>
               )}
             </div>
+
+            {/* Inline Panels */}
+            {panel === 'edit'   && <EditPanel fin={fin} onClose={closePanel} />}
+            {panel === 'cancel' && <CancelPanel fin={fin} onClose={closePanel} />}
           </div>
         )}
       </div>
@@ -98,7 +214,7 @@ export default function FinanceiroTab({ patientId }: TabComponentProps) {
 
   const totalPago     = finances.filter((f) => f.status === 'PAGO').reduce((s, f) => s + Number(f.amount || 0), 0);
   const totalPendente = finances.filter((f) => f.status === 'PENDENTE').reduce((s, f) => s + Number(f.amount || 0), 0);
-  const totalGeral    = finances.reduce((s, f) => s + Number(f.amount || 0), 0);
+  const totalGeral    = finances.filter((f) => f.status !== 'CANCELADO').reduce((s, f) => s + Number(f.amount || 0), 0);
 
   if (showForm) return <NovoLancamentoForm patientId={patientId} onDone={() => setShowForm(false)} />;
 
@@ -114,7 +230,7 @@ export default function FinanceiroTab({ patientId }: TabComponentProps) {
           {[
             { label: 'Total Pago',   value: totalPago,     bg: 'var(--success-50, #f0fdf4)', border: 'var(--success-200, #bbf7d0)', color: 'var(--success-700)' },
             { label: 'Pendente',     value: totalPendente, bg: 'var(--warning-50, #fffbeb)', border: 'var(--warning-200, #fde68a)', color: 'var(--warning-700)' },
-            { label: 'Total Geral',  value: totalGeral,    bg: 'var(--primary-50)',           border: 'var(--primary-200, #99f6e4)', color: 'var(--primary-700)' },
+            { label: 'Total Geral',  value: totalGeral,    bg: 'var(--primary-50)',           border: 'var(--primary-200)',          color: 'var(--primary-700)' },
           ].map(({ label, value, bg, border, color }) => (
             <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)' }}>
               <div style={{ fontSize: 11, fontWeight: 600, color, textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
@@ -130,9 +246,9 @@ export default function FinanceiroTab({ patientId }: TabComponentProps) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {finances.map((fin) => (
-            <FinanceCard 
-              key={fin.id} 
-              fin={fin} 
+            <FinanceCard
+              key={fin.id}
+              fin={fin}
               isExpanded={expandedId === fin.id}
               onToggle={() => setExpandedId(expandedId === fin.id ? null : fin.id)}
             />

@@ -135,6 +135,8 @@ export class FinanceService {
     status: string;
     paidAt?: string;
     paymentMethod?: string;
+    canceledAt?: string;
+    cancelReason?: string;
   }) {
     return this.prisma.finance.update({
       where: { id },
@@ -142,6 +144,8 @@ export class FinanceService {
         status: data.status as never,
         paidAt: data.paidAt ? new Date(data.paidAt) : undefined,
         paymentMethod: data.paymentMethod as never,
+        canceledAt: data.canceledAt ? new Date(data.canceledAt) : undefined,
+        cancelReason: data.cancelReason ?? undefined,
       },
     });
   }

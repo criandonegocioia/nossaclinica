@@ -77,7 +77,7 @@ export interface Finance {
   patientId: string;
   description: string;
   amount: number;
-  status: 'PENDENTE' | 'PAGO' | 'CANCELADO';
+  status: 'PENDENTE' | 'PAGO' | 'CANCELADO' | 'ATRASADO' | 'ESTORNADO';
   type?: 'RECEBIMENTO' | 'DESPESA';
   paymentMethod?: string;
   dueDate?: string;
@@ -85,6 +85,8 @@ export interface Finance {
   totalInstallments?: number;
   installment?: number;
   notes?: string;
+  canceledAt?: string;
+  cancelReason?: string;
   createdAt: string;
 }
 
