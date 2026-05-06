@@ -18,6 +18,7 @@ export function NovoAtendimentoForm({ patientId, onDone }: { patientId: string; 
   const { control, register, handleSubmit, formState: { errors } } = useForm<MedicalRecordFormValues>({
     resolver: zodResolver(medicalRecordSchema),
     defaultValues: {
+      type: '',
       dateTime: new Date().toISOString().slice(0, 16),
       procedures: [],
       complaint: '',
@@ -38,7 +39,7 @@ export function NovoAtendimentoForm({ patientId, onDone }: { patientId: string; 
       patientId,
       dateTime: new Date(data.dateTime).toISOString(),
       procedures: procNames,
-      complaint: data.complaint,
+      complaint: `[${data.type}] ${data.complaint || ''}`.trim(),
       diagnosis: data.diagnosis,
       treatmentPlan: data.treatment,
       prescriptions: data.prescription,
@@ -62,10 +63,22 @@ export function NovoAtendimentoForm({ patientId, onDone }: { patientId: string; 
   return (
     <div className="card" style={{ animation: 'fadeInUp 0.25s ease' }}>
       <div className="card-body">
-        <InlineFormHeader title="Novo Atendimento" onBack={onDone} />
+        <InlineFormHeader title="Novo Registro de Atendimento" onBack={onDone} />
         
         <form>
           <div className="grid grid-2">
+            <Field label="Tipo de atendimento *" error={errors.type?.message}>
+              <select className="input" {...register('type')}>
+                <option value="">Selecione...</option>
+                <option value="Consulta de Avaliação">Consulta de Avaliação</option>
+                <option value="Tratamento">Tratamento</option>
+                <option value="Retorno">Retorno</option>
+                <option value="Urgência">Urgência</option>
+                <option value="Harmonização Orofacial">Harmonização Orofacial</option>
+                <option value="Cirurgia">Cirurgia</option>
+              </select>
+            </Field>
+
             <Field label="Data e hora" error={errors.dateTime?.message}>
               <input className="input" type="datetime-local" {...register('dateTime')} />
             </Field>

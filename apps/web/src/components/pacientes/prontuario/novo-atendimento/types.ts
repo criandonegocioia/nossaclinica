@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const medicalRecordSchema = z.object({
+  type: z.string().min(1, 'Tipo de atendimento é obrigatório'),
   dateTime: z.string().min(1, 'Data e hora são obrigatórios'),
   procedures: z.array(z.string()).min(1, 'Selecione ao menos um procedimento'),
   complaint: z.string().optional(),

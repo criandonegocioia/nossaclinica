@@ -97,7 +97,9 @@ export default function ProntuarioTab({ patientId }: TabComponentProps) {
     <div style={{ animation: 'fadeIn 0.2s ease' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
         <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)' }}>Histórico de Atendimentos</h3>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}><Plus size={14} /> Novo Atendimento</button>
+        <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+          <Plus size={16} /> Novo Registro de Atendimento
+        </button>
       </div>
       {records.length === 0 ? (
         <EmptyState icon={FileText} message="Nenhum atendimento registrado"
