@@ -125,6 +125,172 @@ export default function EstoquePage() {
         </div>
       </div>
 
+      {/* ── Formulário: Novo Produto (Inline) ─────────────────────────── */}
+      {showNewProduct && (
+        <div className="card" style={{ marginBottom: 'var(--space-6)', animation: 'fadeInDown 0.3s ease' }}>
+          <div className="card-header">
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)' }}>
+              <Package size={18} style={{ color: 'var(--primary-500)' }} /> Novo Produto
+            </h3>
+            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowNewProduct(false)}><X size={18} /></button>
+          </div>
+          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <div className="input-group">
+              <label className="input-label required">Nome do produto</label>
+              <input className="input" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Ex: Botox 100U" />
+            </div>
+            <div className="grid grid-2">
+              <div className="input-group">
+                <label className="input-label required">Marca / Fabricante</label>
+                <input className="input" value={newProduct.brand} onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })} placeholder="Ex: Allergan" />
+              </div>
+              <div className="input-group">
+                <label className="input-label required">Categoria</label>
+                <select className="input" value={newProduct.category} onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}>
+                  {CATEGORIES.filter((c) => c.value).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-2">
+              <div className="input-group">
+                <label className="input-label required">Unidade de medida</label>
+                <select className="input" value={newProduct.unit} onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}>
+                  {['frasco', 'seringa', 'unidade', 'caixa', 'carpule', 'ampola', 'kit'].map((u) => <option key={u}>{u}</option>)}
+                </select>
+              </div>
+              <div className="input-group">
+                <label className="input-label">Estoque mínimo</label>
+                <input className="input" type="number" min="0" value={newProduct.minStock} onChange={(e) => setNewProduct({ ...newProduct, minStock: e.target.value })} />
+              </div>
+            </div>
+            <div className="input-group">
+              <label className="input-label">Fornecedor</label>
+              <input className="input" value={newProduct.supplier} onChange={(e) => setNewProduct({ ...newProduct, supplier: e.target.value })} placeholder="Ex: Distribuidora MedSkin" />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+              <button className="btn btn-secondary" onClick={() => setShowNewProduct(false)}>Cancelar</button>
+              <button className="btn btn-primary" disabled={!newProduct.name || createProduct.isPending} onClick={async () => {
+                await createProduct.mutateAsync({ ...newProduct, minStock: parseInt(newProduct.minStock) });
+                setShowNewProduct(false);
+              }}>
+                {createProduct.isPending ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvando...</> : <><Save size={16} /> Cadastrar Produto</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Formulário: Nova Entrada (Lote) (Inline) ──────────────────── */}
+      {showNewBatch && (
+        <div className="card" style={{ marginBottom: 'var(--space-6)', animation: 'fadeInDown 0.3s ease' }}>
+          <div className="card-header">
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)', color: 'var(--success-700)' }}>
+              <ArrowDown size={18} /> Entrada de Estoque
+            </h3>
+            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowNewBatch(false)}><X size={18} /></button>
+          </div>
+          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            {selectedProduct && (
+              <div style={{ padding: 'var(--space-3)', background: 'var(--primary-50)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', color: 'var(--primary-700)' }}>
+                Produto: <strong>{selectedProduct.name}</strong> — {selectedProduct.brand}
+              </div>
+            )}
+            {!selectedProduct && (
+              <div className="input-group">
+                <label className="input-label required">Produto</label>
+                <select className="input" onChange={(e) => setSelectedProduct(products.find((p) => p.id === e.target.value) ?? null)}>
+                  <option value="">Selecione...</option>
+                  {products.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.brand}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="grid grid-2">
+              <div className="input-group">
+                <label className="input-label required">Número do lote</label>
+                <input className="input" value={newBatch.lot} onChange={(e) => setNewBatch({ ...newBatch, lot: e.target.value })} placeholder="LOT2024-A001" />
+              </div>
+              <div className="input-group">
+                <label className="input-label required">Data de validade</label>
+                <input className="input" type="date" value={newBatch.expiresAt} onChange={(e) => setNewBatch({ ...newBatch, expiresAt: e.target.value })} />
+              </div>
+              <div className="input-group">
+                <label className="input-label required">Quantidade</label>
+                <input className="input" type="number" min="1" value={newBatch.quantity} onChange={(e) => setNewBatch({ ...newBatch, quantity: e.target.value })} />
+              </div>
+              <div className="input-group">
+                <label className="input-label">Custo unitário (R$)</label>
+                <input className="input" type="number" min="0" step="0.01" value={newBatch.unitCost} onChange={(e) => setNewBatch({ ...newBatch, unitCost: e.target.value })} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+              <button className="btn btn-secondary" onClick={() => { setShowNewBatch(false); setSelectedProduct(null); }}>Cancelar</button>
+              <button className="btn btn-primary" disabled={!newBatch.lot || !newBatch.expiresAt || !newBatch.quantity || createBatch.isPending} onClick={async () => {
+                await createBatch.mutateAsync({ productId: selectedProduct?.id, ...newBatch, quantity: parseInt(newBatch.quantity), unitCost: newBatch.unitCost ? parseFloat(newBatch.unitCost) : undefined, expiresAt: new Date(newBatch.expiresAt + 'T12:00:00').toISOString() });
+                setShowNewBatch(false); setSelectedProduct(null);
+              }}>
+                {createBatch.isPending ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Registrando...</> : <><CheckCircle size={16} /> Registrar Entrada</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Formulário: Saída / Uso (Inline) ──────────────────────────── */}
+      {showMovement && (
+        <div className="card" style={{ marginBottom: 'var(--space-6)', animation: 'fadeInDown 0.3s ease' }}>
+          <div className="card-header">
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)', color: 'var(--error-700)' }}>
+              <ArrowUp size={18} /> Registrar Saída
+            </h3>
+            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowMovement(false)}><X size={18} /></button>
+          </div>
+          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            {!selectedProduct && (
+              <div className="input-group">
+                <label className="input-label required">Produto</label>
+                <select className="input" onChange={(e) => setSelectedProduct(products.find((p) => p.id === e.target.value) ?? null)}>
+                  <option value="">Selecione...</option>
+                  {products.filter((p) => p.currentStock > 0).map((p) => <option key={p.id} value={p.id}>{p.name} — Estoque: {p.currentStock} {p.unit}</option>)}
+                </select>
+              </div>
+            )}
+            {selectedProduct && (
+              <div style={{ padding: 'var(--space-3)', background: 'var(--error-50)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', color: 'var(--error-700)' }}>
+                {selectedProduct.name} — Estoque atual: <strong>{selectedProduct.currentStock} {selectedProduct.unit}</strong>
+              </div>
+            )}
+            <div className="grid grid-2">
+              <div className="input-group">
+                <label className="input-label required">Tipo de saída</label>
+                <select className="input" value={movement.type} onChange={(e) => setMovement({ ...movement, type: e.target.value })}>
+                  <option value="EXIT">Uso em procedimento</option>
+                  <option value="ADJUSTMENT">Ajuste de inventário</option>
+                  <option value="EXPIRED">Descarte por vencimento</option>
+                  <option value="RETURN">Devolução ao fornecedor</option>
+                </select>
+              </div>
+              <div className="input-group">
+                <label className="input-label required">Quantidade</label>
+                <input className="input" type="number" min="1" value={movement.quantity} onChange={(e) => setMovement({ ...movement, quantity: e.target.value })} />
+              </div>
+            </div>
+            <div className="input-group">
+              <label className="input-label">Observação</label>
+              <input className="input" value={movement.reason} onChange={(e) => setMovement({ ...movement, reason: e.target.value })} placeholder="Ex: Usado em procedimento Dra. Ana" />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+              <button className="btn btn-secondary" onClick={() => { setShowMovement(false); setSelectedProduct(null); }}>Cancelar</button>
+              <button className="btn btn-primary" disabled={!movement.quantity || createMovement.isPending} onClick={async () => {
+                await createMovement.mutateAsync({ productId: selectedProduct?.id, type: movement.type, quantity: parseInt(movement.quantity), reason: movement.reason });
+                setShowMovement(false); setSelectedProduct(null);
+              }}>
+                {createMovement.isPending ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Registrando...</> : <><Save size={16} /> Registrar Saída</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
         {[
@@ -266,175 +432,7 @@ export default function EstoquePage() {
         )}
       </div>
 
-      {/* ── Modal: Novo Produto ─────────────────────────── */}
-      {showNewProduct && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowNewProduct(false)}>
-          <div className="card" style={{ width: 520, animation: 'fadeInUp 0.3s ease' }} onClick={(e) => e.stopPropagation()}>
-            <div className="card-header">
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)' }}>
-                <Package size={18} style={{ color: 'var(--primary-500)' }} /> Novo Produto
-              </h3>
-              <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowNewProduct(false)}><X size={18} /></button>
-            </div>
-            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              <div className="input-group">
-                <label className="input-label required">Nome do produto</label>
-                <input className="input" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Ex: Botox 100U" />
-              </div>
-              <div className="grid grid-2">
-                <div className="input-group">
-                  <label className="input-label required">Marca / Fabricante</label>
-                  <input className="input" value={newProduct.brand} onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })} placeholder="Ex: Allergan" />
-                </div>
-                <div className="input-group">
-                  <label className="input-label required">Categoria</label>
-                  <select className="input" value={newProduct.category} onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}>
-                    {CATEGORIES.filter((c) => c.value).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-2">
-                <div className="input-group">
-                  <label className="input-label required">Unidade de medida</label>
-                  <select className="input" value={newProduct.unit} onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}>
-                    {['frasco', 'seringa', 'unidade', 'caixa', 'carpule', 'ampola', 'kit'].map((u) => <option key={u}>{u}</option>)}
-                  </select>
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Estoque mínimo</label>
-                  <input className="input" type="number" min="0" value={newProduct.minStock} onChange={(e) => setNewProduct({ ...newProduct, minStock: e.target.value })} />
-                </div>
-              </div>
-              <div className="input-group">
-                <label className="input-label">Fornecedor</label>
-                <input className="input" value={newProduct.supplier} onChange={(e) => setNewProduct({ ...newProduct, supplier: e.target.value })} placeholder="Ex: Distribuidora MedSkin" />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-                <button className="btn btn-secondary" onClick={() => setShowNewProduct(false)}>Cancelar</button>
-                <button className="btn btn-primary" disabled={!newProduct.name || createProduct.isPending} onClick={async () => {
-                  await createProduct.mutateAsync({ ...newProduct, minStock: parseInt(newProduct.minStock) });
-                  setShowNewProduct(false);
-                }}>
-                  {createProduct.isPending ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvando...</> : <><Save size={16} /> Cadastrar</>}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* ── Modal: Nova Entrada (Lote) ──────────────────── */}
-      {showNewBatch && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowNewBatch(false)}>
-          <div className="card" style={{ width: 460, animation: 'fadeInUp 0.3s ease' }} onClick={(e) => e.stopPropagation()}>
-            <div className="card-header">
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)', color: 'var(--success-700)' }}>
-                <ArrowDown size={18} /> Entrada de Estoque
-              </h3>
-              <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowNewBatch(false)}><X size={18} /></button>
-            </div>
-            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              {selectedProduct && (
-                <div style={{ padding: 'var(--space-3)', background: 'var(--primary-50)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', color: 'var(--primary-700)' }}>
-                  Produto: <strong>{selectedProduct.name}</strong> — {selectedProduct.brand}
-                </div>
-              )}
-              {!selectedProduct && (
-                <div className="input-group">
-                  <label className="input-label required">Produto</label>
-                  <select className="input" onChange={(e) => setSelectedProduct(products.find((p) => p.id === e.target.value) ?? null)}>
-                    <option value="">Selecione...</option>
-                    {products.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.brand}</option>)}
-                  </select>
-                </div>
-              )}
-              <div className="grid grid-2">
-                <div className="input-group">
-                  <label className="input-label required">Número do lote</label>
-                  <input className="input" value={newBatch.lot} onChange={(e) => setNewBatch({ ...newBatch, lot: e.target.value })} placeholder="LOT2024-A001" />
-                </div>
-                <div className="input-group">
-                  <label className="input-label required">Data de validade</label>
-                  <input className="input" type="date" value={newBatch.expiresAt} onChange={(e) => setNewBatch({ ...newBatch, expiresAt: e.target.value })} />
-                </div>
-                <div className="input-group">
-                  <label className="input-label required">Quantidade</label>
-                  <input className="input" type="number" min="1" value={newBatch.quantity} onChange={(e) => setNewBatch({ ...newBatch, quantity: e.target.value })} />
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Custo unitário (R$)</label>
-                  <input className="input" type="number" min="0" step="0.01" value={newBatch.unitCost} onChange={(e) => setNewBatch({ ...newBatch, unitCost: e.target.value })} />
-                </div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-                <button className="btn btn-secondary" onClick={() => { setShowNewBatch(false); setSelectedProduct(null); }}>Cancelar</button>
-                <button className="btn btn-primary" disabled={!newBatch.lot || !newBatch.expiresAt || !newBatch.quantity || createBatch.isPending} onClick={async () => {
-                  await createBatch.mutateAsync({ productId: selectedProduct?.id, ...newBatch, quantity: parseInt(newBatch.quantity), unitCost: newBatch.unitCost ? parseFloat(newBatch.unitCost) : undefined, expiresAt: new Date(newBatch.expiresAt + 'T12:00:00').toISOString() });
-                  setShowNewBatch(false); setSelectedProduct(null);
-                }}>
-                  {createBatch.isPending ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Registrando...</> : <><CheckCircle size={16} /> Registrar Entrada</>}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal: Saída / Uso ──────────────────────────── */}
-      {showMovement && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowMovement(false)}>
-          <div className="card" style={{ width: 420, animation: 'fadeInUp 0.3s ease' }} onClick={(e) => e.stopPropagation()}>
-            <div className="card-header">
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)', color: 'var(--error-700)' }}>
-                <ArrowUp size={18} /> Registrar Saída
-              </h3>
-              <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowMovement(false)}><X size={18} /></button>
-            </div>
-            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              {!selectedProduct && (
-                <div className="input-group">
-                  <label className="input-label required">Produto</label>
-                  <select className="input" onChange={(e) => setSelectedProduct(products.find((p) => p.id === e.target.value) ?? null)}>
-                    <option value="">Selecione...</option>
-                    {products.filter((p) => p.currentStock > 0).map((p) => <option key={p.id} value={p.id}>{p.name} — Estoque: {p.currentStock} {p.unit}</option>)}
-                  </select>
-                </div>
-              )}
-              {selectedProduct && (
-                <div style={{ padding: 'var(--space-3)', background: 'var(--error-50)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-sm)', color: 'var(--error-700)' }}>
-                  {selectedProduct.name} — Estoque atual: <strong>{selectedProduct.currentStock} {selectedProduct.unit}</strong>
-                </div>
-              )}
-              <div className="input-group">
-                <label className="input-label required">Tipo de saída</label>
-                <select className="input" value={movement.type} onChange={(e) => setMovement({ ...movement, type: e.target.value })}>
-                  <option value="EXIT">Uso em procedimento</option>
-                  <option value="ADJUSTMENT">Ajuste de inventário</option>
-                  <option value="EXPIRED">Descarte por vencimento</option>
-                  <option value="RETURN">Devolução ao fornecedor</option>
-                </select>
-              </div>
-              <div className="input-group">
-                <label className="input-label required">Quantidade</label>
-                <input className="input" type="number" min="1" value={movement.quantity} onChange={(e) => setMovement({ ...movement, quantity: e.target.value })} />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Observação</label>
-                <input className="input" value={movement.reason} onChange={(e) => setMovement({ ...movement, reason: e.target.value })} placeholder="Ex: Usado em procedimento Dra. Ana" />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-                <button className="btn btn-secondary" onClick={() => { setShowMovement(false); setSelectedProduct(null); }}>Cancelar</button>
-                <button className="btn btn-primary" disabled={!movement.quantity || createMovement.isPending} onClick={async () => {
-                  await createMovement.mutateAsync({ productId: selectedProduct?.id, type: movement.type, quantity: parseInt(movement.quantity), reason: movement.reason });
-                  setShowMovement(false); setSelectedProduct(null);
-                }}>
-                  {createMovement.isPending ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Registrando...</> : <><Save size={16} /> Registrar Saída</>}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
