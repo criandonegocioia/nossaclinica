@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, DollarSign, Banknote, Smartphone, CreditCard, Building2, ChevronDown, ChevronLeft, Pencil, XCircle } from 'lucide-react';
+import { Plus, DollarSign, Banknote, Smartphone, CreditCard, Building2, ChevronDown, ChevronLeft, Pencil, XCircle, Printer } from 'lucide-react';
 import { useFinances, useUpdateFinanceStatus } from '@/hooks/useApi';
 import { EmptyState } from '../shared/ui';
 import { PAYMENT_LABELS } from '../shared/types';
@@ -112,6 +112,74 @@ function FinanceCard({ fin, isExpanded, onToggle }: { fin: Finance; isExpanded: 
 
   const closePanel = () => setPanel('none');
 
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const printDate = new Date().toLocaleDateString('pt-BR');
+    const itemsHtml = fin.description.split('+').map(item => item.trim()).filter(Boolean).map(item => `
+      <tr>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 13px;">${item}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Recibo Financeiro</title>
+        <style>
+          @media print { body { margin: 0; } @page { size: A4; margin: 15mm; } }
+          body { font-family: 'Segoe UI', sans-serif; max-width: 700px; margin: 30px auto; color: #1a1a1a; }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0d9488; padding-bottom: 16px; margin-bottom: 24px; }
+          .header h1 { font-size: 24px; color: #0d9488; margin: 0; }
+          .header .info { text-align: right; font-size: 11px; color: #888; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          thead th { background: #f1f5f9; padding: 8px 12px; font-size: 11px; text-transform: uppercase; color: #64748b; text-align: left; }
+          .totals { text-align: right; margin-bottom: 24px; }
+          .totals .row { display: flex; justify-content: flex-end; gap: 30px; padding: 4px 12px; font-size: 14px; }
+          .totals .total { font-size: 18px; font-weight: 700; color: #0d9488; border-top: 2px solid #0d9488; padding-top: 8px; margin-top: 8px; }
+          .details { background: #f8fafa; padding: 12px 16px; border-radius: 8px; margin-bottom: 30px; font-size: 13px; line-height: 1.5; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div><h1>OdontoFace Clínica</h1><p style="font-size: 11px; color: #888; margin: 4px 0 0;">Recibo de Lançamento Financeiro</p></div>
+          <div class="info">Impresso em:<br/>${printDate}</div>
+        </div>
+        
+        <div class="details">
+          <strong>Status:</strong> ${fin.status} ${isCanceled ? `(Cancelado em ${new Date(fin.canceledAt!).toLocaleDateString('pt-BR')} - Motivo: ${fin.cancelReason})` : ''}<br/>
+          <strong>Vencimento:</strong> ${dateStr || '—'}<br/>
+          <strong>Pagamento:</strong> ${PAYMENT_LABELS[fin.paymentMethod || ''] || fin.paymentMethod || '—'} 
+          ${fin.paidAt ? `(Pago em ${new Date(fin.paidAt).toLocaleDateString('pt-BR')})` : ''}
+        </div>
+
+        <table>
+          <thead><tr><th>Descrição dos Itens / Procedimentos</th></tr></thead>
+          <tbody>${itemsHtml || `<tr><td style="padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 13px;">${fin.description}</td></tr>`}</tbody>
+        </table>
+
+        <div class="totals">
+          <div class="row total"><span>TOTAL:</span><span>R$ ${Number(fin.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+        </div>
+        
+        ${fin.notes ? `<div class="details"><strong>Observações:</strong><br/>${fin.notes}</div>` : ''}
+        
+        <div style="display: flex; justify-content: center; margin-top: 60px;">
+          <div style="text-align: center; width: 200px;">
+            <div style="border-top: 1px solid #333; margin-bottom: 4px;"></div>
+            <div style="font-size: 12px;">Assinatura do Responsável</div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
   return (
     <div className="card" style={{ opacity: isCanceled ? 0.7 : 1 }}>
       <div className="card-body">
@@ -142,18 +210,23 @@ function FinanceCard({ fin, isExpanded, onToggle }: { fin: Finance; isExpanded: 
                 <button className="btn btn-ghost btn-sm btn-icon" onClick={onToggle}><ChevronLeft size={18} /></button>
                 <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 600 }}>Detalhes do Lançamento</h3>
               </div>
-              {!isCanceled && (
-                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setPanel(panel === 'edit' ? 'none' : 'edit')}
-                    style={{ color: 'var(--primary-600)' }}>
-                    <Pencil size={13} /> Editar status
-                  </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setPanel(panel === 'cancel' ? 'none' : 'cancel')}
-                    style={{ color: 'var(--error-600, #dc2626)' }}>
-                    <XCircle size={13} /> Cancelar
-                  </button>
-                </div>
-              )}
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <button className="btn btn-ghost btn-sm" onClick={handlePrint}>
+                  <Printer size={13} /> Imprimir
+                </button>
+                {!isCanceled && (
+                  <>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setPanel(panel === 'edit' ? 'none' : 'edit')}
+                      style={{ color: 'var(--primary-600)' }}>
+                      <Pencil size={13} /> Editar status
+                    </button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setPanel(panel === 'cancel' ? 'none' : 'cancel')}
+                      style={{ color: 'var(--error-600, #dc2626)' }}>
+                      <XCircle size={13} /> Cancelar
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Detail Grid */}
