@@ -685,7 +685,7 @@ export function useProcedures(params: { category?: string; active?: boolean } = 
     queryKey: ['procedures', params],
     queryFn: async () => {
       const res = await api.get('/schedules/procedures', { params });
-      return res.data as ApiProcedure[];
+      return (res.data?.data ?? res.data) as ApiProcedure[];
     },
     staleTime: 5 * 60 * 1000, // 5 min — catalog rarely changes
   });

@@ -2,7 +2,8 @@
 
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useCreateMedicalRecord, useProcedures } from '@/hooks/useApi';
+import { useCreateMedicalRecord, useProcedures, useCreateSchedule } from '@/hooks/useApi';
+import { useAuthStore } from '@/stores/auth';
 import { InlineFormHeader, Field } from '../../shared/ui';
 import { medicalRecordSchema, type MedicalRecordFormValues } from './types';
 import { ProcedimentosMultiSelect } from './ProcedimentosMultiSelect';
@@ -10,6 +11,8 @@ import { PrescricaoEditor } from './PrescricaoEditor';
 
 export function NovoAtendimentoForm({ patientId, onDone }: { patientId: string; onDone: () => void }) {
   const create = useCreateMedicalRecord();
+  const scheduleCreate = useCreateSchedule();
+  const { user } = useAuthStore();
   const { data: procedures = [] } = useProcedures({ active: true });
 
   const { control, register, handleSubmit, formState: { errors } } = useForm<MedicalRecordFormValues>({
@@ -42,6 +45,17 @@ export function NovoAtendimentoForm({ patientId, onDone }: { patientId: string; 
       orientations: data.notes,
       isDraft
     });
+
+    if (data.nextReturn && user?.id && !isDraft) {
+      await scheduleCreate.mutateAsync({
+        patientId,
+        professionalId: user.id,
+        startAt: new Date(data.nextReturn + 'T08:00:00').toISOString(),
+        endAt: new Date(data.nextReturn + 'T09:00:00').toISOString(),
+        notes: 'Retorno agendado via Prontuário',
+      });
+    }
+
     onDone();
   };
 
