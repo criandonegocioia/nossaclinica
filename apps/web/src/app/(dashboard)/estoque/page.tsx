@@ -40,10 +40,10 @@ const MOCK_PRODUCTS = [
 
 type Stock = typeof MOCK_PRODUCTS[0];
 
-function getStockStatus(p: Stock): 'empty' | 'low' | 'expiring' | 'ok' {
+function getStockStatus(p: any): 'empty' | 'low' | 'expiring' | 'ok' {
   if (p.currentStock === 0) return 'empty';
   if (p.currentStock < p.minStock) return 'low';
-  if (p.batches.some((b) => b.status === 'EXPIRING')) return 'expiring';
+  if ((p.batches || []).some((b: any) => b.status === 'EXPIRING')) return 'expiring';
   return 'ok';
 }
 
@@ -57,7 +57,10 @@ function StockBar({ current, min }: { current: number; min: number }) {
   );
 }
 
+import { useRouter } from 'next/navigation';
+
 export default function EstoquePage() {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -75,11 +78,22 @@ export default function EstoquePage() {
   const createBatch = useCreateStockBatch();
   const createMovement = useCreateStockMovement();
 
-  // Use mock until backend module is wired
-  const products = MOCK_PRODUCTS;
+  // Get real data from the backend
+  const { data: stockData, isLoading } = useStockProducts({
+    category: category || undefined,
+    search: search || undefined,
+    status: statusFilter || undefined,
+    page,
+    limit,
+  });
 
-  const filtered = products.filter((p) => {
-    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.brand.toLowerCase().includes(search.toLowerCase());
+  // Use the API results or empty array if loading/error
+  const products = stockData?.data || [];
+  const totalPages = stockData?.meta?.totalPages || 1;
+  const total = stockData?.meta?.total || 0;
+  
+  const filtered = products.filter((p: any) => {
+    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.brand && p.brand.toLowerCase().includes(search.toLowerCase()));
     const matchCat = !category || p.category === category;
     const status = getStockStatus(p);
     const matchStatus = !statusFilter || statusFilter === status;
@@ -87,13 +101,14 @@ export default function EstoquePage() {
   });
 
   const paginated = filtered.slice((page - 1) * limit, page * limit);
-  const totalPages = Math.ceil(filtered.length / limit);
+  const totalPagesComputed = Math.ceil(filtered.length / limit);
+  const displayTotalPages = Math.max(totalPages, totalPagesComputed);
 
-  // KPIs
-  const total = products.length;
-  const expiring = products.filter((p) => p.batches.some((b) => b.status === 'EXPIRING')).length;
-  const lowStock = products.filter((p) => p.currentStock < p.minStock).length;
-  const empty = products.filter((p) => p.currentStock === 0).length;
+  // KPIs (in a real scenario, this would come from `useStockAlerts` or `stockData.meta`)
+  // For now, we compute locally based on what was loaded, or we could fetch the specific stats
+  const expiring = products.filter((p: any) => p.batches?.some((b: any) => b.status === 'EXPIRING')).length;
+  const lowStock = products.filter((p: any) => p.currentStock < p.minStock).length;
+  const empty = products.filter((p: any) => p.currentStock === 0).length;
 
   const STATUS_BADGE: Record<string, { label: string; class: string }> = {
     ok: { label: 'OK', class: 'badge-success' },
@@ -119,66 +134,11 @@ export default function EstoquePage() {
           <button className="btn btn-secondary" onClick={() => setShowMovement(true)}>
             <ArrowUp size={16} /> Saída
           </button>
-          <button className="btn btn-primary" onClick={() => setShowNewProduct(true)}>
+          <button className="btn btn-primary" onClick={() => router.push('/estoque/novo')}>
             <Plus size={18} /> Novo Produto
           </button>
         </div>
       </div>
-
-      {/* ── Formulário: Novo Produto (Inline) ─────────────────────────── */}
-      {showNewProduct && (
-        <div className="card" style={{ marginBottom: 'var(--space-6)', animation: 'fadeInDown 0.3s ease' }}>
-          <div className="card-header">
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)' }}>
-              <Package size={18} style={{ color: 'var(--primary-500)' }} /> Novo Produto
-            </h3>
-            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowNewProduct(false)}><X size={18} /></button>
-          </div>
-          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <div className="input-group">
-              <label className="input-label required">Nome do produto</label>
-              <input className="input" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Ex: Botox 100U" />
-            </div>
-            <div className="grid grid-2">
-              <div className="input-group">
-                <label className="input-label required">Marca / Fabricante</label>
-                <input className="input" value={newProduct.brand} onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })} placeholder="Ex: Allergan" />
-              </div>
-              <div className="input-group">
-                <label className="input-label required">Categoria</label>
-                <select className="input" value={newProduct.category} onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}>
-                  {CATEGORIES.filter((c) => c.value).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-2">
-              <div className="input-group">
-                <label className="input-label required">Unidade de medida</label>
-                <select className="input" value={newProduct.unit} onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}>
-                  {['frasco', 'seringa', 'unidade', 'caixa', 'carpule', 'ampola', 'kit'].map((u) => <option key={u}>{u}</option>)}
-                </select>
-              </div>
-              <div className="input-group">
-                <label className="input-label">Estoque mínimo</label>
-                <input className="input" type="number" min="0" value={newProduct.minStock} onChange={(e) => setNewProduct({ ...newProduct, minStock: e.target.value })} />
-              </div>
-            </div>
-            <div className="input-group">
-              <label className="input-label">Fornecedor</label>
-              <input className="input" value={newProduct.supplier} onChange={(e) => setNewProduct({ ...newProduct, supplier: e.target.value })} placeholder="Ex: Distribuidora MedSkin" />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-              <button className="btn btn-secondary" onClick={() => setShowNewProduct(false)}>Cancelar</button>
-              <button className="btn btn-primary" disabled={!newProduct.name || createProduct.isPending} onClick={async () => {
-                await createProduct.mutateAsync({ ...newProduct, minStock: parseInt(newProduct.minStock) });
-                setShowNewProduct(false);
-              }}>
-                {createProduct.isPending ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvando...</> : <><Save size={16} /> Cadastrar Produto</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Formulário: Nova Entrada (Lote) (Inline) ──────────────────── */}
       {showNewBatch && (
@@ -373,7 +333,7 @@ export default function EstoquePage() {
                 paginated.map((p, i) => {
                   const status = getStockStatus(p);
                   const badge = STATUS_BADGE[status];
-                  const nearestExpiry = p.batches.sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime())[0];
+                  const nearestExpiry = (p.batches || []).sort((a: any, b: any) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime())[0];
                   return (
                     <tr key={p.id} style={{ animation: `fadeInUp 0.2s ease backwards ${i * 30}ms` }}>
                       <td>
@@ -421,13 +381,13 @@ export default function EstoquePage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {displayTotalPages > 1 && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-2)', padding: 'var(--space-4)', borderTop: '1px solid var(--gray-75)' }}>
             <button className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← Anterior</button>
             <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', alignSelf: 'center' }}>
-              Página {page} de {totalPages}
+              Página {page} de {displayTotalPages}
             </span>
-            <button className="btn btn-secondary btn-sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Próxima →</button>
+            <button className="btn btn-secondary btn-sm" disabled={page >= displayTotalPages} onClick={() => setPage((p) => p + 1)}>Próxima →</button>
           </div>
         )}
       </div>
