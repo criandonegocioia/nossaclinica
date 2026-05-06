@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Package, ArrowLeft, Save } from 'lucide-react';
+import { Package, ArrowLeft, Save, X } from 'lucide-react';
 import { useCreateStockProduct } from '@/hooks/useApi';
 
 const CATEGORIES = [
@@ -44,40 +44,51 @@ export default function NovoProdutoPage() {
 
   return (
     <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: 800, margin: '0 auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
         
-        {/* Breadcrumb / Back Button */}
-        <div>
-          <button 
-            className="btn btn-ghost btn-sm" 
-            onClick={() => router.push('/estoque')}
-            style={{ color: 'var(--gray-500)', padding: 0, height: 'auto', marginBottom: 'var(--space-4)' }}
-          >
-            <ArrowLeft size={16} /> Voltar para estoque
-          </button>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            <div style={{ width: 48, height: 48, borderRadius: 'var(--radius-lg)', background: 'var(--primary-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-600)' }}>
-              <Package size={24} />
-            </div>
-            <div>
-              <h1 className="page-title">Novo Produto</h1>
-              <p className="page-subtitle">Cadastre um novo item no controle de estoque</p>
-            </div>
+        {/* Page Header padrão (Simulando a tela de Estoque) */}
+        <div className="page-header">
+          <div>
+            <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <Package size={24} style={{ color: 'var(--primary-500)' }} /> Estoque
+            </h1>
+            <p className="page-subtitle">Gestão de produtos e inventário</p>
+          </div>
+          <div>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => router.push('/estoque')}
+            >
+              <ArrowLeft size={16} /> Voltar para lista
+            </button>
           </div>
         </div>
 
-        {/* Formulário num Card em Tela Cheia */}
-        <div className="card">
-          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+        {/* Formulário num Card em Tela Cheia no Estilo "Inline Expansion" */}
+        <div className="card" style={{ animation: 'fadeInDown 0.3s ease' }}>
+          
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)' }}>
+              + Novo Produto
+            </h3>
+            <button 
+              className="btn btn-ghost btn-sm btn-icon" 
+              onClick={() => router.push('/estoque')}
+              aria-label="Fechar"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
             
             <div className="input-group">
-              <label className="input-label required">Nome do produto</label>
+              <label className="input-label required">Descrição / Nome do produto</label>
               <input 
                 className="input" 
                 value={newProduct.name} 
                 onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} 
-                placeholder="Ex: Botox 100U" 
+                placeholder="Ex: Botox 100U..." 
                 autoFocus
               />
             </div>
@@ -132,12 +143,12 @@ export default function NovoProdutoPage() {
             </div>
             
             <div className="input-group">
-              <label className="input-label">Fornecedor</label>
+              <label className="input-label">Fornecedor / Observações</label>
               <input 
                 className="input" 
                 value={newProduct.supplier} 
                 onChange={(e) => setNewProduct({ ...newProduct, supplier: e.target.value })} 
-                placeholder="Ex: Distribuidora MedSkin" 
+                placeholder="Opcional" 
               />
             </div>
 
@@ -157,7 +168,7 @@ export default function NovoProdutoPage() {
                 {createProduct.isPending ? (
                   <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvando...</>
                 ) : (
-                  <><Save size={16} /> Cadastrar Produto</>
+                  <><Save size={16} /> Salvar Produto</>
                 )}
               </button>
             </div>
