@@ -68,9 +68,21 @@ export class MedicalRecordsController {
     return this.service.createNewVersion(id, body, userId);
   }
 
-  @Patch(':id/finalize')
+  @Patch(':id/status')
   @Roles('ADMIN', 'DENTISTA', 'HOF')
-  finalize(@Param('id') id: string) {
-    return this.service.finalize(id);
+  updateStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string; isDraft?: boolean },
+  ) {
+    return this.service.updateStatus(id, body);
+  }
+
+  @Patch(':id/cancel')
+  @Roles('ADMIN', 'DENTISTA', 'HOF')
+  cancel(
+    @Param('id') id: string,
+    @Body() body: { reason: string },
+  ) {
+    return this.service.cancel(id, body.reason);
   }
 }

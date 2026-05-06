@@ -135,25 +135,31 @@ export function DateBlock({
   variant = 'primary',
 }: {
   date: Date;
-  variant?: 'primary' | 'warning' | 'muted';
+  variant?: 'primary' | 'warning' | 'muted' | 'error';
 }) {
   const bg =
     variant === 'primary'
       ? 'var(--primary-50)'
       : variant === 'warning'
       ? 'var(--warning-50, #fffbeb)'
+      : variant === 'error'
+      ? 'var(--error-50, #fef2f2)'
       : 'var(--gray-50)';
   const textColor =
     variant === 'primary'
       ? 'var(--primary-700)'
       : variant === 'warning'
       ? 'var(--warning-700, #a16207)'
+      : variant === 'error'
+      ? 'var(--error-700, #b91c1c)'
       : 'var(--gray-500)';
   const subColor =
     variant === 'primary'
       ? 'var(--primary-500)'
       : variant === 'warning'
       ? 'var(--warning-500)'
+      : variant === 'error'
+      ? 'var(--error-500, #ef4444)'
       : 'var(--gray-400)';
   const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 

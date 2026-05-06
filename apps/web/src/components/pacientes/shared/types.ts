@@ -34,11 +34,15 @@ export interface MedicalRecord {
   procedures?: string;
   complaint?: string;
   diagnosis?: string;
-  treatment?: string;
-  prescription?: string;
-  notes?: string;
+  treatmentPlan?: string;
+  prescriptions?: string;
+  orientations?: string;
+  complications?: string;
   nextReturn?: string;
   isDraft: boolean;
+  status: string;
+  cancellationReason?: string;
+  cancelledAt?: string;
   createdAt: string;
 }
 

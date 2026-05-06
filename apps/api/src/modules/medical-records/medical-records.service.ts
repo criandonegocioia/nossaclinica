@@ -112,4 +112,25 @@ export class MedicalRecordsService {
       data: { isDraft: false },
     });
   }
+
+  async updateStatus(id: string, data: { status: string; isDraft?: boolean }) {
+    return this.prisma.medicalRecord.update({
+      where: { id },
+      data: {
+        status: data.status,
+        ...(data.isDraft !== undefined && { isDraft: data.isDraft })
+      },
+    });
+  }
+
+  async cancel(id: string, reason: string) {
+    return this.prisma.medicalRecord.update({
+      where: { id },
+      data: {
+        status: 'CANCELADO',
+        cancellationReason: reason,
+        cancelledAt: new Date(),
+      },
+    });
+  }
 }

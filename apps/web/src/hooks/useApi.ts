@@ -194,6 +194,32 @@ export function useCreateMedicalRecord() {
   });
 }
 
+export function useUpdateMedicalRecordStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { id: string; patientId: string; status: string; isDraft?: boolean }) => {
+      const res = await api.patch(`/medical-records/${data.id}/status`, { status: data.status, isDraft: data.isDraft });
+      return res.data;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['medical-records', vars.patientId] });
+    },
+  });
+}
+
+export function useCancelMedicalRecord() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { id: string; patientId: string; reason: string }) => {
+      const res = await api.patch(`/medical-records/${data.id}/cancel`, { reason: data.reason });
+      return res.data;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['medical-records', vars.patientId] });
+    },
+  });
+}
+
 // =============================================
 // Anamnesis Hooks
 // =============================================

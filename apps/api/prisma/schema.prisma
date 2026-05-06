@@ -212,6 +212,9 @@ model MedicalRecord {
   attachments           Json?
   professionalSignature String?  @map("professional_signature")
   isDraft               Boolean  @default(true) @map("is_draft")
+  status                String   @default("ATIVO") // ATIVO, CANCELADO
+  cancelledAt           DateTime? @map("cancelled_at")
+  cancellationReason    String?  @map("cancellation_reason")
   previousVersionId     String?  @map("previous_version_id")
   createdAt             DateTime @default(now()) @map("created_at")
 
