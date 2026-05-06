@@ -7,15 +7,18 @@ export function Field({
   label,
   children,
   span,
+  error,
 }: {
   label: string;
   children: React.ReactNode;
   span?: boolean;
+  error?: string;
 }) {
   return (
     <div className="input-group" style={span ? { gridColumn: 'span 2' } : undefined}>
       <label className="input-label">{label}</label>
       {children}
+      {error && <span style={{ color: 'var(--error-600, #dc2626)', fontSize: '11px', marginTop: '4px' }}>{error}</span>}
     </div>
   );
 }
