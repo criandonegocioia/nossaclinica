@@ -791,8 +791,7 @@ function NewScheduleInline({ patientId, patientName, onDone }: { patientId: stri
   const professionals = dbProfessionalsRes?.data || [];
   const { data: roomsRes } = useRooms();
   const rooms = roomsRes?.data || [];
-  const { data: procsRes } = useProcedures();
-  const procedures = procsRes?.data || [];
+  const { data: procedures = [] } = useProcedures();
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],

@@ -37,6 +37,14 @@ export class SchedulingController {
     return this.service.getDashboardStats();
   }
 
+  @Get('procedures')
+  findProcedures(
+    @Query('category') category?: string,
+    @Query('active') active?: string,
+  ) {
+    return this.service.findProcedures({ category, active: active !== 'false' });
+  }
+
   @Get(':id')
   findById(@Param('id') id: string) {
     return this.service.findById(id);
@@ -60,3 +68,4 @@ export class SchedulingController {
     return this.service.reschedule(id, body);
   }
 }
+

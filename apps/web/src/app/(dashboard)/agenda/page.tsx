@@ -131,7 +131,7 @@ function NewAppointmentInline({ defaultDate, defaultTime, defaultRoom, params, o
   }, [form.duration]);
 
   useEffect(() => {
-    if (!form.procedureId && dbProcedures?.length > 0) update('procedureId', dbProcedures[0].id);
+    if (!form.procedureId && dbProcedures && dbProcedures.length > 0) update('procedureId', dbProcedures[0].id);
     if (!form.professionalId && dbProfessionals?.length > 0) update('professionalId', dbProfessionals[0].id);
     if (!form.roomId && dbRooms?.length > 0) update('roomId', dbRooms[0].id);
   }, [dbRooms, dbProcedures, dbProfessionals]);

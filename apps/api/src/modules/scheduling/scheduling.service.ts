@@ -6,6 +6,25 @@ import { Prisma, ScheduleStatus } from '@prisma/client';
 export class SchedulingService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findProcedures(params: { category?: string; active?: boolean }) {
+    return this.prisma.procedure.findMany({
+      where: {
+        active: params.active !== false ? true : undefined,
+        ...(params.category ? { category: params.category as any } : {}),
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        priceDefault: true,
+        category: true,
+        colorCode: true,
+        active: true,
+      },
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
+    });
+  }
+
   async findAll(params: {
     professionalId?: string;
     roomId?: string;

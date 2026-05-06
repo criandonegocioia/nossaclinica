@@ -11,10 +11,9 @@ import type { TabComponentProps, Schedule } from '../shared/types';
 function NewScheduleForm({ patientId, patientName, onDone }: { patientId: string; patientName: string; onDone: () => void }) {
   const { data: usersData } = useUsers();
   const { data: roomsData }  = useRooms();
-  const { data: procsData }  = useProcedures();
+  const { data: procs = [] } = useProcedures();
   const users = (usersData as any)?.data ?? usersData ?? [];
   const rooms = (roomsData as any)?.data ?? roomsData ?? [];
-  const procs = (procsData as any)?.data ?? procsData ?? [];
 
   const [form, setForm] = useState({
     startAt: '', endAt: '', professionalId: '', roomId: '', procedureId: '', notes: '',

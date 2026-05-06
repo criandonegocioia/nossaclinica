@@ -662,13 +662,25 @@ export function useRooms() {
   });
 }
 
-export function useProcedures() {
+export interface ApiProcedure {
+  id: string;
+  code: string | null;
+  name: string;
+  priceDefault: string | number | null;
+  category: string;
+  colorCode: string | null;
+  active: boolean;
+  durationDefault?: number;
+}
+
+export function useProcedures(params: { category?: string; active?: boolean } = {}) {
   return useQuery({
-    queryKey: ['procedures'],
+    queryKey: ['procedures', params],
     queryFn: async () => {
-      const res = await api.get('/procedures');
-      return res.data;
+      const res = await api.get('/schedules/procedures', { params });
+      return res.data as ApiProcedure[];
     },
+    staleTime: 5 * 60 * 1000, // 5 min — catalog rarely changes
   });
 }
 
