@@ -2,57 +2,12 @@
 
 import { useState } from 'react';
 import { Plus, FileText, ChevronDown, ChevronLeft } from 'lucide-react';
-import { useMedicalRecords, useCreateMedicalRecord } from '@/hooks/useApi';
-import { InlineFormHeader, Field, EmptyState, DateBlock } from '../shared/ui';
+import { useMedicalRecords } from '@/hooks/useApi';
+import { EmptyState, DateBlock } from '../shared/ui';
 import type { TabComponentProps, MedicalRecord } from '../shared/types';
+import { NovoAtendimentoForm } from './novo-atendimento/NovoAtendimentoForm';
 
-function NewRecordForm({ patientId, onDone }: { patientId: string; onDone: () => void }) {
-  const [form, setForm] = useState({
-    dateTime: new Date().toISOString().slice(0, 16),
-    procedures: '', complaint: '', diagnosis: '', treatment: '',
-    prescription: '', notes: '', nextReturn: '',
-  });
-  const create = useCreateMedicalRecord();
-  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
-  const save = async (isDraft: boolean) => {
-    await create.mutateAsync({
-      patientId,
-      dateTime: new Date(form.dateTime).toISOString(),
-      procedures: form.procedures,
-      complaint: form.complaint,
-      diagnosis: form.diagnosis,
-      treatmentPlan: form.treatment,
-      prescriptions: form.prescription,
-      orientations: form.notes,
-      isDraft
-    });
-    onDone();
-  };
-  return (
-    <div className="card" style={{ animation: 'fadeInUp 0.25s ease' }}>
-      <div className="card-body">
-        <InlineFormHeader title="Novo Atendimento" onBack={onDone} />
-        <div className="grid grid-2">
-          <Field label="Data e hora"><input className="input" type="datetime-local" value={form.dateTime} onChange={(e) => set('dateTime', e.target.value)} /></Field>
-          <Field label="Procedimento(s)"><input className="input" value={form.procedures} onChange={(e) => set('procedures', e.target.value)} /></Field>
-          <Field label="Queixa principal" span><textarea className="input" rows={2} value={form.complaint} onChange={(e) => set('complaint', e.target.value)} style={{ resize: 'vertical' }} /></Field>
-          <Field label="Diagnóstico" span><textarea className="input" rows={2} value={form.diagnosis} onChange={(e) => set('diagnosis', e.target.value)} style={{ resize: 'vertical' }} /></Field>
-          <Field label="Tratamento / Evolução" span><textarea className="input" rows={3} value={form.treatment} onChange={(e) => set('treatment', e.target.value)} style={{ resize: 'vertical' }} /></Field>
-          <Field label="Prescrição / Receita" span><textarea className="input" rows={2} value={form.prescription} onChange={(e) => set('prescription', e.target.value)} style={{ resize: 'vertical' }} /></Field>
-          <Field label="Observações internas" span><textarea className="input" rows={2} value={form.notes} onChange={(e) => set('notes', e.target.value)} style={{ resize: 'vertical' }} /></Field>
-          <Field label="Data de retorno"><input className="input" type="date" value={form.nextReturn} onChange={(e) => set('nextReturn', e.target.value)} /></Field>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-6)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--gray-100)' }}>
-          <button className="btn btn-secondary" onClick={onDone}>Cancelar</button>
-          <button className="btn btn-ghost" onClick={() => save(true)} disabled={create.isPending}>Salvar Rascunho</button>
-          <button className="btn btn-primary" onClick={() => save(false)} disabled={create.isPending}>
-            {create.isPending ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvando...</> : 'Finalizar Atendimento'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+
 
 function RecordCard({ record, isExpanded, onToggle }: { record: MedicalRecord; isExpanded: boolean; onToggle: () => void }) {
   const dateObj = record.dateTime ? new Date(record.dateTime) : record.createdAt ? new Date(record.createdAt) : null;
@@ -136,7 +91,7 @@ export default function ProntuarioTab({ patientId }: TabComponentProps) {
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  if (showForm) return <NewRecordForm patientId={patientId} onDone={() => setShowForm(false)} />;
+  if (showForm) return <NovoAtendimentoForm patientId={patientId} onDone={() => setShowForm(false)} />;
 
   return (
     <div style={{ animation: 'fadeIn 0.2s ease' }}>
