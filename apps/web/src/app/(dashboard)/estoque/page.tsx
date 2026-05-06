@@ -158,9 +158,9 @@ export default function EstoquePage() {
             {!selectedProduct && (
               <div className="input-group">
                 <label className="input-label required">Produto</label>
-                <select className="input" onChange={(e) => setSelectedProduct(products.find((p) => p.id === e.target.value) ?? null)}>
+                <select className="input" onChange={(e) => setSelectedProduct(products.find((p: any) => p.id === e.target.value) ?? null)}>
                   <option value="">Selecione...</option>
-                  {products.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.brand}</option>)}
+                  {products.map((p: any) => <option key={p.id} value={p.id}>{p.name} — {p.brand}</option>)}
                 </select>
               </div>
             )}
@@ -208,9 +208,9 @@ export default function EstoquePage() {
             {!selectedProduct && (
               <div className="input-group">
                 <label className="input-label required">Produto</label>
-                <select className="input" onChange={(e) => setSelectedProduct(products.find((p) => p.id === e.target.value) ?? null)}>
+                <select className="input" onChange={(e) => setSelectedProduct(products.find((p: any) => p.id === e.target.value) ?? null)}>
                   <option value="">Selecione...</option>
-                  {products.filter((p) => p.currentStock > 0).map((p) => <option key={p.id} value={p.id}>{p.name} — Estoque: {p.currentStock} {p.unit}</option>)}
+                  {products.filter((p: any) => p.currentStock > 0).map((p: any) => <option key={p.id} value={p.id}>{p.name} — Estoque: {p.currentStock} {p.unit}</option>)}
                 </select>
               </div>
             )}
@@ -330,7 +330,7 @@ export default function EstoquePage() {
                   </td>
                 </tr>
               ) : (
-                paginated.map((p, i) => {
+                paginated.map((p: any, i: number) => {
                   const status = getStockStatus(p);
                   const badge = STATUS_BADGE[status];
                   const nearestExpiry = (p.batches || []).sort((a: any, b: any) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime())[0];
