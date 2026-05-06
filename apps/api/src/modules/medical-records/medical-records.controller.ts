@@ -68,6 +68,15 @@ export class MedicalRecordsController {
     return this.service.createNewVersion(id, body, userId);
   }
 
+  @Patch(':id')
+  @Roles('ADMIN', 'DENTISTA', 'HOF')
+  update(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.service.update(id, body);
+  }
+
   @Patch(':id/status')
   @Roles('ADMIN', 'DENTISTA', 'HOF')
   updateStatus(

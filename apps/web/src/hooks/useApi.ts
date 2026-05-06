@@ -194,6 +194,19 @@ export function useCreateMedicalRecord() {
   });
 }
 
+export function useUpdateMedicalRecord() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patientId, ...data }: Record<string, unknown> & { id: string; patientId: string }) => {
+      const res = await api.patch(`/medical-records/${id}`, data);
+      return res.data;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['medical-records', vars.patientId] });
+    },
+  });
+}
+
 export function useUpdateMedicalRecordStatus() {
   const queryClient = useQueryClient();
   return useMutation({

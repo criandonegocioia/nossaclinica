@@ -9,7 +9,7 @@ import { NovoAtendimentoForm } from './novo-atendimento/NovoAtendimentoForm';
 
 
 
-function RecordCard({ record, isExpanded, onToggle }: { record: MedicalRecord; isExpanded: boolean; onToggle: () => void }) {
+function RecordCard({ record, isExpanded, onToggle, onEdit }: { record: MedicalRecord; isExpanded: boolean; onToggle: () => void; onEdit: (r: MedicalRecord) => void }) {
   const dateObj = record.dateTime ? new Date(record.dateTime) : record.createdAt ? new Date(record.createdAt) : null;
   const procLabel = record.procedures || 'Atendimento';
   const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -88,10 +88,10 @@ function RecordCard({ record, isExpanded, onToggle }: { record: MedicalRecord; i
                   <>
                     <span className={`badge badge-dot ${badgeClass}`}>{displayStatus}</span>
                     {!isCanceled && (
-                      <div className="dropdown" style={{ position: 'relative' }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => setIsEditingStatus(true)}>Editar</button>
+                      <>
+                        <button className="btn btn-ghost btn-sm" onClick={() => onEdit(record)}>Editar</button>
                         <button className="btn btn-ghost btn-sm" style={{ color: 'var(--error-600)' }} onClick={() => setIsCanceling(true)}>Cancelar</button>
-                      </div>
+                      </>
                     )}
                   </>
                 )}
@@ -180,8 +180,19 @@ export default function ProntuarioTab({ patientId }: TabComponentProps) {
   );
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingRecord, setEditingRecord] = useState<MedicalRecord | undefined>(undefined);
 
-  if (showForm) return <NovoAtendimentoForm patientId={patientId} onDone={() => setShowForm(false)} />;
+  const handleEdit = (record: MedicalRecord) => {
+    setEditingRecord(record);
+    setShowForm(true);
+  };
+
+  const handleDone = () => {
+    setShowForm(false);
+    setEditingRecord(undefined);
+  };
+
+  if (showForm) return <NovoAtendimentoForm patientId={patientId} onDone={handleDone} editingRecord={editingRecord} />;
 
   return (
     <div style={{ animation: 'fadeIn 0.2s ease' }}>
@@ -198,7 +209,7 @@ export default function ProntuarioTab({ patientId }: TabComponentProps) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {records.map((r, i) => (
             <div key={r.id} style={{ animation: `fadeInUp 0.2s ease backwards ${i * 50}ms` }}>
-              <RecordCard record={r} isExpanded={expandedId === r.id} onToggle={() => setExpandedId(expandedId === r.id ? null : r.id)} />
+              <RecordCard record={r} isExpanded={expandedId === r.id} onToggle={() => setExpandedId(expandedId === r.id ? null : r.id)} onEdit={handleEdit} />
             </div>
           ))}
         </div>

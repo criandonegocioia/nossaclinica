@@ -2,22 +2,60 @@
 
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useCreateMedicalRecord, useProcedures, useCreateSchedule } from '@/hooks/useApi';
+import { useCreateMedicalRecord, useUpdateMedicalRecord, useProcedures, useCreateSchedule } from '@/hooks/useApi';
 import { useAuthStore } from '@/stores/auth';
 import { InlineFormHeader, Field } from '../../shared/ui';
 import { medicalRecordSchema, type MedicalRecordFormValues } from './types';
 import { ProcedimentosMultiSelect } from './ProcedimentosMultiSelect';
 import { PrescricaoEditor } from './PrescricaoEditor';
+import type { MedicalRecord } from '../../shared/types';
 
-export function NovoAtendimentoForm({ patientId, onDone }: { patientId: string; onDone: () => void }) {
+interface NovoAtendimentoFormProps {
+  patientId: string;
+  onDone: () => void;
+  editingRecord?: MedicalRecord;
+}
+
+export function NovoAtendimentoForm({ patientId, onDone, editingRecord }: NovoAtendimentoFormProps) {
   const create = useCreateMedicalRecord();
+  const update = useUpdateMedicalRecord();
   const scheduleCreate = useCreateSchedule();
   const { user } = useAuthStore();
   const { data: procedures = [] } = useProcedures({ active: true });
 
+  // Parse type from complaint "[Type] complaint text" pattern
+  const parseType = (complaint?: string) => {
+    if (!complaint) return '';
+    const match = complaint.match(/^\[(.+?)\]\s*/);
+    return match ? match[1] : '';
+  };
+  const parseComplaint = (complaint?: string) => {
+    if (!complaint) return '';
+    return complaint.replace(/^\[.+?\]\s*/, '');
+  };
+
+  // Map stored procedure names back to IDs for MultiSelect
+  const parseProcedureIds = (procString?: string): string[] => {
+    if (!procString || procedures.length === 0) return [];
+    const names = procString.split(',').map(s => s.trim());
+    return names.map(name => procedures.find(p => p.name === name)?.id || name).filter(Boolean);
+  };
+
   const { control, register, handleSubmit, formState: { errors } } = useForm<MedicalRecordFormValues>({
     resolver: zodResolver(medicalRecordSchema),
-    defaultValues: {
+    defaultValues: editingRecord ? {
+      type: parseType(editingRecord.complaint),
+      dateTime: editingRecord.dateTime
+        ? new Date(editingRecord.dateTime).toISOString().slice(0, 16)
+        : new Date().toISOString().slice(0, 16),
+      procedures: parseProcedureIds(editingRecord.procedures),
+      complaint: parseComplaint(editingRecord.complaint),
+      diagnosis: editingRecord.diagnosis || '',
+      treatment: editingRecord.treatmentPlan || '',
+      prescription: editingRecord.prescriptions || '',
+      notes: editingRecord.orientations || '',
+      nextReturn: '',
+    } : {
       type: '',
       dateTime: new Date().toISOString().slice(0, 16),
       procedures: [],
@@ -35,7 +73,7 @@ export function NovoAtendimentoForm({ patientId, onDone }: { patientId: string; 
       .map(id => procedures.find(p => p.id === id)?.name || id)
       .join(', ');
 
-    await create.mutateAsync({
+    const payload = {
       patientId,
       dateTime: new Date(data.dateTime).toISOString(),
       procedures: procNames,
@@ -44,8 +82,14 @@ export function NovoAtendimentoForm({ patientId, onDone }: { patientId: string; 
       treatmentPlan: data.treatment,
       prescriptions: data.prescription,
       orientations: data.notes,
-      isDraft
-    });
+      isDraft,
+    };
+
+    if (editingRecord) {
+      await update.mutateAsync({ id: editingRecord.id, ...payload });
+    } else {
+      await create.mutateAsync(payload);
+    }
 
     if (data.nextReturn && user?.id && !isDraft) {
       await scheduleCreate.mutateAsync({
@@ -60,11 +104,16 @@ export function NovoAtendimentoForm({ patientId, onDone }: { patientId: string; 
     onDone();
   };
 
+  const isPending = create.isPending || update.isPending;
+
   return (
     <div className="card" style={{ animation: 'fadeInUp 0.25s ease' }}>
       <div className="card-body">
-        <InlineFormHeader title="Novo Registro de Atendimento" onBack={onDone} />
-        
+        <InlineFormHeader
+          title={editingRecord ? 'Editar Registro de Atendimento' : 'Novo Registro de Atendimento'}
+          onBack={onDone}
+        />
+
         <form>
           <div className="grid grid-2">
             <Field label="Tipo de atendimento *" error={errors.type?.message}>
@@ -82,7 +131,7 @@ export function NovoAtendimentoForm({ patientId, onDone }: { patientId: string; 
             <Field label="Data e hora" error={errors.dateTime?.message}>
               <input className="input" type="datetime-local" {...register('dateTime')} />
             </Field>
-            
+
             <Field label="Procedimento(s)" error={errors.procedures?.message}>
               <Controller
                 name="procedures"
@@ -126,23 +175,25 @@ export function NovoAtendimentoForm({ patientId, onDone }: { patientId: string; 
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-6)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--gray-100)' }}>
             <button type="button" className="btn btn-secondary" onClick={onDone}>Cancelar</button>
-            
-            <button 
-              type="button" 
-              className="btn btn-ghost" 
-              onClick={handleSubmit((data) => onSubmit(data, true))} 
-              disabled={create.isPending}
+
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={handleSubmit((data) => onSubmit(data, true))}
+              disabled={isPending}
             >
               Salvar Rascunho
             </button>
-            
-            <button 
-              type="button" 
-              className="btn btn-primary" 
-              onClick={handleSubmit((data) => onSubmit(data, false))} 
-              disabled={create.isPending}
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleSubmit((data) => onSubmit(data, false))}
+              disabled={isPending}
             >
-              {create.isPending ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvando...</> : 'Finalizar Atendimento'}
+              {isPending
+                ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvando...</>
+                : 'Finalizar Atendimento'}
             </button>
           </div>
         </form>

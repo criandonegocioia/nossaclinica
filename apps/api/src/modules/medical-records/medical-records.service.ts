@@ -123,6 +123,24 @@ export class MedicalRecordsService {
     });
   }
 
+  async update(id: string, data: Record<string, unknown>) {
+    const { patientId, professionalId, ...rest } = data as any;
+    return this.prisma.medicalRecord.update({
+      where: { id },
+      data: {
+        ...(rest.dateTime && { dateTime: new Date(rest.dateTime as string) }),
+        ...(rest.procedures !== undefined && { procedures: rest.procedures as string }),
+        ...(rest.complaint !== undefined && { complaint: rest.complaint as string }),
+        ...(rest.diagnosis !== undefined && { diagnosis: rest.diagnosis as string }),
+        ...(rest.treatmentPlan !== undefined && { treatmentPlan: rest.treatmentPlan as string }),
+        ...(rest.prescriptions !== undefined && { prescriptions: rest.prescriptions as string }),
+        ...(rest.orientations !== undefined && { orientations: rest.orientations as string }),
+        ...(rest.complications !== undefined && { complications: rest.complications as string }),
+        ...(rest.isDraft !== undefined && { isDraft: rest.isDraft as boolean }),
+      },
+    });
+  }
+
   async cancel(id: string, reason: string) {
     return this.prisma.medicalRecord.update({
       where: { id },

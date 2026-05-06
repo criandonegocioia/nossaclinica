@@ -35,7 +35,7 @@ const PROCEDURE_OPTIONS = [
   'Peeling',
 ];
 
-import { useMedicalRecords, useCreateMedicalRecord, useFinalizeMedicalRecord } from '@/hooks/useApi';
+import { useMedicalRecords, useCreateMedicalRecord } from '@/hooks/useApi';
 
 export default function ProntuarioPage() {
   const [showNewRecord, setShowNewRecord] = useState(false);
@@ -51,28 +51,21 @@ export default function ProntuarioPage() {
   const records = (recordsData?.data || []) as any[];
   
   const createRecord = useCreateMedicalRecord();
-  const finalizeRecord = useFinalizeMedicalRecord();
 
   const handleSaveRecord = async (status: 'DRAFT' | 'FINAL') => {
     if (!selectedPatientId) return;
     setSaving(true);
     
     try {
-      if (editingId) {
-        // Edit draft not fully supported by backend without new version yet, but we'll try finalize if status is FINAL
-        if (status === 'FINAL') {
-          await finalizeRecord.mutateAsync(editingId);
-        }
-      } else {
-        const payload = {
-          patientId: selectedPatientId,
-          type: newType,
-          status: status,
-          content: newContent,
-          procedures: newProcedures,
-        };
-        await createRecord.mutateAsync(payload);
-      }
+      const payload = {
+        patientId: selectedPatientId,
+        type: newType,
+        status: status,
+        content: newContent,
+        procedures: newProcedures,
+        isDraft: status === 'DRAFT',
+      };
+      await createRecord.mutateAsync(payload);
       
       setShowNewRecord(false);
       setEditingId(null);
