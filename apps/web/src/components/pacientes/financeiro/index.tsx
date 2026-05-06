@@ -6,7 +6,7 @@ import { useFinances } from '@/hooks/useApi';
 import { EmptyState } from '../shared/ui';
 import { PAYMENT_LABELS } from '../shared/types';
 import type { TabComponentProps, Finance } from '../shared/types';
-import NewFinanceInline from './forms/NewFinanceInline';
+import NovoLancamentoForm from './novo-lancamento/NovoLancamentoForm';
 
 // ── Payment method icon ────────────────────────────────────────────────────────
 function PaymentIcon({ method }: { method: string }) {
@@ -100,7 +100,7 @@ export default function FinanceiroTab({ patientId }: TabComponentProps) {
   const totalPendente = finances.filter((f) => f.status === 'PENDENTE').reduce((s, f) => s + Number(f.amount || 0), 0);
   const totalGeral    = finances.reduce((s, f) => s + Number(f.amount || 0), 0);
 
-  if (showForm) return <NewFinanceInline patientId={patientId} onDone={() => setShowForm(false)} />;
+  if (showForm) return <NovoLancamentoForm patientId={patientId} onDone={() => setShowForm(false)} />;
 
   return (
     <div style={{ animation: 'fadeIn 0.2s ease' }}>
