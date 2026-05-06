@@ -3,7 +3,7 @@
 
 ## Identidade do Projeto
 - **Sistema**: Gestão de clínica odontológica (Clinica Odontologica e Estetica)
-- **Stack**: Next.js 14 App Router · TypeScript · TailwindCSS · NestJS · PostgreSQL/Prisma
+- **Stack**: Next.js 14 App Router · TypeScript · TailwindCSS · NestJS · Supabase/Prisma
 - **Monorepo**: apps/web (frontend) · apps/api (backend) · shared/
 
 ## Regras Permanentes de Arquitetura

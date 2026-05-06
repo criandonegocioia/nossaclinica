@@ -71,3 +71,4 @@ components/pacientes/financeiro/novo-lancamento/
 - **Classes disponíveis**: `.card`, `.card-body`, `.input`, `.btn`, `.btn-primary`, `.btn-ghost`, `.btn-sm`, `.table`, `.table-container`, `.input-group`, `.input-label`, `.grid`, `.grid-2`, `.badge`, `.spinner`, `.avatar`
 - **Limite de 120 linhas** por arquivo de componente (regra do AGENTS.md)
 - **Cálculos financeiros**: lógica pura em `types.ts`, não inline no componente
+- **Banco de Dados (Produção)**: O banco de dados de produção está hospedado no **Supabase**. Migrations que afetam produção (como a de cancelamento do financeiro) devem ser aplicadas através do SQL Editor do Supabase ou via CLI com a `DATABASE_URL` correta do Supabase.
