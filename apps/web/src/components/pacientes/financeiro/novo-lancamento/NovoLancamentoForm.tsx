@@ -56,6 +56,7 @@ export default function NovoLancamentoForm({ patientId, patientName, onDone }: P
       patientId,
       description,
       amount: total,
+      type: 'RECEITA',
       paymentMethod: data.paymentMethod,
       status: data.status,
       dueDate: data.dueDate ? new Date(data.dueDate + 'T12:00:00').toISOString() : undefined,
