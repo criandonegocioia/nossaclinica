@@ -51,14 +51,13 @@ components/pacientes/financeiro/novo-lancamento/
 
 ## Última sessão
 
-- **Data:** 05/05/2026
+- **Data:** 06/05/2026
 - **O que foi feito:**
-  - Implementação completa do módulo `NovoLancamentoForm` (Zod + react-hook-form + useFieldArray)
-  - Criação do endpoint `/schedules/procedures` no NestJS
-  - Tipagem de `useProcedures()` com `ApiProcedure[]` e fallback mock
-  - Remoção de `NewFinanceInline.tsx`, `_legacy-forms.tsx`, `_page-legacy.tsx`
-  - TypeScript: `Exit code: 0` — zero erros em todo o frontend
-  - 4 commits + push
+  - Implementação completa do módulo `NovoLancamentoForm` (Zod + react-hook-form + useFieldArray) para a Visão Paciente.
+  - Ajuste e padronização visual da tela `NovoLancamentoGeralForm` (Visão Clínica).
+  - Remoção de lixo de código e transição completa para o CSS proprietário nativo.
+  - Estabelecimento da regra absoluta de banimento do TailwindCSS (`AGENTS.md` e `MEMORY.md` atualizados).
+  - Configuração do RECIBO via modal multicanal (WhatsApp/E-mail/PDF).
 
 - **O que ficou pendente:**
   - Validar visualmente o novo carrinho em produção (badge `✓ N procedimentos do banco`)
@@ -67,8 +66,9 @@ components/pacientes/financeiro/novo-lancamento/
 
 ## Notas importantes para próximas sessões
 
-- **NÃO usar TailwindCSS** — o projeto usa design system CSS customizado com variáveis (`globals.css`)
-- **Classes disponíveis**: `.card`, `.card-body`, `.input`, `.btn`, `.btn-primary`, `.btn-ghost`, `.btn-sm`, `.table`, `.table-container`, `.input-group`, `.input-label`, `.grid`, `.grid-2`, `.badge`, `.spinner`, `.avatar`
+- **PROIBIÇÃO ABSOLUTA DE TAILWINDCSS**: O projeto NÃO utiliza e NÃO suporta classes utilitárias clássicas do Tailwind (`flex`, `mb-4`, `p-2`, `bg-blue-50`). Usá-las quebra o layout.
+- **Como estilizar layouts estruturais**: Use estritamente as classes nativas (`.card`, `.input`, `.btn`, `.grid-2`). Para flexbox e espaçamentos personalizados, use obrigatóriamente **inline styles** referenciando variáveis CSS (ex: `style={{ display: 'flex', gap: '8px', padding: 'var(--space-4)' }}`).
+- **Classes disponíveis (`globals.css`)**: `.card`, `.card-body`, `.input`, `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-sm`, `.table`, `.table-container`, `.input-group`, `.input-label`, `.grid`, `.grid-2`, `.badge`, `.spinner`, `.avatar`.
 - **Limite de 120 linhas** por arquivo de componente (regra do AGENTS.md)
 - **Cálculos financeiros**: lógica pura em `types.ts`, não inline no componente
 - **Banco de Dados (Produção)**: O banco de dados de produção está hospedado no **Supabase**. Migrations que afetam produção (como a de cancelamento do financeiro) devem ser aplicadas através do SQL Editor do Supabase ou via CLI com a `DATABASE_URL` correta do Supabase.

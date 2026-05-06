@@ -34,7 +34,8 @@ Todo código gerado neste projeto DEVE seguir:
 - **Proteção de PII**: Identificadores PII (Personally Identifiable Information) não trafegam em URLs (Query Params). Consultas complexas utilizam payload de body em requisições POST.
 
 ## Regras Permanentes de UX/Design
-- **Sistema de Grid e Espaçamento**: Adoção estrita da escala de 8pt (4, 8, 12, 16, 24, 32, 48, 64px) através do TailwindCSS.
+- **Proibição Estrita de TailwindCSS**: O projeto utiliza um sistema CSS proprietário. É **ESTRITAMENTE PROIBIDO** utilizar classes utilitárias típicas do TailwindCSS (`flex`, `p-4`, `mb-2`, `text-center`, etc). O uso dessas classes resultará em falhas graves de layout.
+- **Sistema de Classes e Inline Styles**: Utilize as classes globais estabelecidas (`.card`, `.input`, `.btn`, `.btn-primary`, `.grid-2`, etc). Para alinhamentos ou espaçamentos que não possuam classe definida, aplique **inline styles** usando as variáveis nativas (ex: `style={{ display: 'flex', gap: '8px', padding: 'var(--space-4)' }}`).
 - **Tipografia**: Manutenção de hierarquia em três níveis (heading/body/caption), vetando tamanhos de fonte inferiores a 13px.
 - **Acessibilidade Absoluta**: Toda área interativa demanda `aria-label`, anéis de foco visíveis (`focus-visible ring`) e contraste compatível com a diretriz AA.
 - **Feedback de Estado Multidimensional**: Elementos de ação (botões/formulários) mapeiam explicitamente os estados `loading`, `error`, `success` e `disabled`.
@@ -47,7 +48,7 @@ Todo código gerado neste projeto DEVE seguir:
 | Criar/Refatorar Formulário (Client) | `@nextjs` `@react-hook-form` `@typescript-expert` |
 | Validar/Criar Contratos API | `@nestjs` `@zod` `@typescript-expert` |
 | Modelagem de Banco de Dados | `@prisma` `@postgres` `@senior-architect` |
-| Novo Design / Componente UI | `@tailwind` `@frontend-design` `@interaction-design` |
+| Novo Design / Componente UI | `@frontend-design` `@interaction-design` (Zero Tailwind) |
 | Segurança, Autenticação e LGPD | `@security-auditor` |
 | Auditoria de Interface | `@web-design-guidelines` `@senior-frontend` |
 

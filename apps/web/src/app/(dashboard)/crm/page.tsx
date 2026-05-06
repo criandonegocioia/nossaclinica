@@ -132,52 +132,56 @@ export default function CRMPage() {
 
         <div className="card" style={{ animation: 'fadeInUp 0.25s ease' }}>
           <div className="card-body">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-5)' }}>
-
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               {/* 1. Nome */}
-              <div className="input-group" style={{ gridColumn: 'span 2' }}>
+              <div className="input-group">
                 <label className="input-label required">Nome completo</label>
                 <input className="input" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Nome do lead" autoFocus />
               </div>
 
-              {/* 2. Origem — logo após o nome */}
-              <div className="input-group">
-                <label className="input-label required">Origem</label>
-                <select className="input" value={form.source} onChange={(e) => { set('source', e.target.value); set('contact', ''); }}>
-                  {SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
+              <div className="grid grid-2">
+                {/* 2. Origem */}
+                <div className="input-group">
+                  <label className="input-label required">Origem</label>
+                  <select className="input" value={form.source} onChange={(e) => { set('source', e.target.value); set('contact', ''); }}>
+                    {SOURCE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
+                {/* 3. Campo de contato dinâmico */}
+                <div className="input-group">
+                  <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <SourceIcon size={14} style={{ color: 'var(--primary-500)' }} />
+                    {sourceConfig.contactLabel}
+                  </label>
+                  <input className="input" value={form.contact} onChange={(e) => set('contact', e.target.value)}
+                    placeholder={sourceConfig.contactPlaceholder} />
+                </div>
               </div>
 
-              {/* 3. Campo de contato dinâmico — baseado na origem */}
-              <div className="input-group">
-                <label className="input-label" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <SourceIcon size={14} style={{ color: 'var(--primary-500)' }} />
-                  {sourceConfig.contactLabel}
-                </label>
-                <input className="input" value={form.contact} onChange={(e) => set('contact', e.target.value)}
-                  placeholder={sourceConfig.contactPlaceholder} />
+              <div className="grid grid-2">
+                {/* 4. E-mail */}
+                <div className="input-group">
+                  <label className="input-label">E-mail</label>
+                  <input className="input" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="email@exemplo.com" />
+                </div>
+                {/* 5. Interesse */}
+                <div className="input-group">
+                  <label className="input-label">Interesse principal</label>
+                  <input className="input" value={form.interest} onChange={(e) => set('interest', e.target.value)} placeholder="Ex: Toxina Botulínica, Clareamento..." />
+                </div>
               </div>
 
-              {/* 4. E-mail (extra, sempre disponível) */}
-              <div className="input-group">
-                <label className="input-label">E-mail</label>
-                <input className="input" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="email@exemplo.com" />
-              </div>
-
-              {/* 5. Interesse */}
-              <div className="input-group">
-                <label className="input-label">Interesse principal</label>
-                <input className="input" value={form.interest} onChange={(e) => set('interest', e.target.value)} placeholder="Ex: Toxina Botulínica, Clareamento..." />
-              </div>
-
-              {/* 6. Valor */}
-              <div className="input-group">
-                <label className="input-label">Valor estimado (R$)</label>
-                <input className="input" type="number" min="0" step="0.01" value={form.value} onChange={(e) => set('value', e.target.value)} placeholder="0,00" />
+              <div className="grid grid-2">
+                {/* 6. Valor */}
+                <div className="input-group">
+                  <label className="input-label">Valor estimado (R$)</label>
+                  <input className="input" type="number" min="0" step="0.01" value={form.value} onChange={(e) => set('value', e.target.value)} placeholder="0,00" />
+                </div>
+                <div></div>
               </div>
 
               {/* 7. Observações */}
-              <div className="input-group" style={{ gridColumn: 'span 2' }}>
+              <div className="input-group">
                 <label className="input-label">Observações</label>
                 <textarea className="input" rows={3} value={form.notes} onChange={(e) => set('notes', e.target.value)}
                   placeholder="Informações adicionais sobre o lead..." style={{ resize: 'vertical' }} />

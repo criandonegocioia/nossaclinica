@@ -277,11 +277,11 @@ export default function EstoquePage() {
               <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowNewProduct(false)}><X size={18} /></button>
             </div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-                <div className="input-group" style={{ gridColumn: '1/-1' }}>
-                  <label className="input-label required">Nome do produto</label>
-                  <input className="input" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Ex: Botox 100U" />
-                </div>
+              <div className="input-group">
+                <label className="input-label required">Nome do produto</label>
+                <input className="input" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} placeholder="Ex: Botox 100U" />
+              </div>
+              <div className="grid grid-2">
                 <div className="input-group">
                   <label className="input-label required">Marca / Fabricante</label>
                   <input className="input" value={newProduct.brand} onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })} placeholder="Ex: Allergan" />
@@ -292,6 +292,8 @@ export default function EstoquePage() {
                     {CATEGORIES.filter((c) => c.value).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
                 </div>
+              </div>
+              <div className="grid grid-2">
                 <div className="input-group">
                   <label className="input-label required">Unidade de medida</label>
                   <select className="input" value={newProduct.unit} onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}>
@@ -302,10 +304,10 @@ export default function EstoquePage() {
                   <label className="input-label">Estoque mínimo</label>
                   <input className="input" type="number" min="0" value={newProduct.minStock} onChange={(e) => setNewProduct({ ...newProduct, minStock: e.target.value })} />
                 </div>
-                <div className="input-group" style={{ gridColumn: '1/-1' }}>
-                  <label className="input-label">Fornecedor</label>
-                  <input className="input" value={newProduct.supplier} onChange={(e) => setNewProduct({ ...newProduct, supplier: e.target.value })} placeholder="Ex: Distribuidora MedSkin" />
-                </div>
+              </div>
+              <div className="input-group">
+                <label className="input-label">Fornecedor</label>
+                <input className="input" value={newProduct.supplier} onChange={(e) => setNewProduct({ ...newProduct, supplier: e.target.value })} placeholder="Ex: Distribuidora MedSkin" />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
                 <button className="btn btn-secondary" onClick={() => setShowNewProduct(false)}>Cancelar</button>
@@ -346,7 +348,7 @@ export default function EstoquePage() {
                   </select>
                 </div>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div className="grid grid-2">
                 <div className="input-group">
                   <label className="input-label required">Número do lote</label>
                   <input className="input" value={newBatch.lot} onChange={(e) => setNewBatch({ ...newBatch, lot: e.target.value })} placeholder="LOT2024-A001" />

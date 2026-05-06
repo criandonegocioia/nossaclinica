@@ -233,48 +233,52 @@ export default function MedicamentosPage() {
               </h3>
               <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowNew(false)}><X size={18} /></button>
             </div>
-            <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-              <div className="input-group" style={{ gridColumn: '1/-1' }}>
+            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <div className="input-group">
                 <label className="input-label required">Nome comercial</label>
                 <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Amoxicilina" />
               </div>
-              <div className="input-group">
-                <label className="input-label required">Princípio ativo</label>
-                <input className="input" value={form.activeIngredient} onChange={(e) => setForm({ ...form, activeIngredient: e.target.value })} />
+              <div className="grid grid-2">
+                <div className="input-group">
+                  <label className="input-label required">Princípio ativo</label>
+                  <input className="input" value={form.activeIngredient} onChange={(e) => setForm({ ...form, activeIngredient: e.target.value })} />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Concentração</label>
+                  <input className="input" value={form.concentration} onChange={(e) => setForm({ ...form, concentration: e.target.value })} placeholder="500mg" />
+                </div>
+              </div>
+              <div className="grid grid-2">
+                <div className="input-group">
+                  <label className="input-label">Forma farmacêutica</label>
+                  <select className="input" value={form.form} onChange={(e) => setForm({ ...form, form: e.target.value })}>
+                    {['COMPRIMIDO', 'CAPSULA', 'LIQUIDO', 'INJETAVEL', 'POMADA', 'GEL', 'SPRAY'].map((f) => <option key={f} value={f}>{FORM_LABELS[f] ?? f}</option>)}
+                  </select>
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Categoria</label>
+                  <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                    {MED_CATEGORIES.filter((c) => c.value).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
               </div>
               <div className="input-group">
-                <label className="input-label">Concentração</label>
-                <input className="input" value={form.concentration} onChange={(e) => setForm({ ...form, concentration: e.target.value })} placeholder="500mg" />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Forma farmacêutica</label>
-                <select className="input" value={form.form} onChange={(e) => setForm({ ...form, form: e.target.value })}>
-                  {['COMPRIMIDO', 'CAPSULA', 'LIQUIDO', 'INJETAVEL', 'POMADA', 'GEL', 'SPRAY'].map((f) => <option key={f} value={f}>{FORM_LABELS[f] ?? f}</option>)}
-                </select>
-              </div>
-              <div className="input-group">
-                <label className="input-label">Categoria</label>
-                <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                  {MED_CATEGORIES.filter((c) => c.value).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-              </div>
-              <div className="input-group" style={{ gridColumn: '1/-1' }}>
                 <label className="input-label">Posologia padrão</label>
                 <input className="input" value={form.defaultDosage} onChange={(e) => setForm({ ...form, defaultDosage: e.target.value })} placeholder="Ex: 1 comprimido 8/8h por 7 dias" />
               </div>
-              <div className="input-group" style={{ gridColumn: '1/-1' }}>
+              <div className="input-group">
                 <label className="input-label">Instruções de uso</label>
                 <input className="input" value={form.defaultInstructions} onChange={(e) => setForm({ ...form, defaultInstructions: e.target.value })} placeholder="Tomar após refeições" />
               </div>
-              <div className="input-group" style={{ gridColumn: '1/-1' }}>
+              <div className="input-group">
                 <label className="input-label">Contraindicações</label>
                 <input className="input" value={form.contraindications} onChange={(e) => setForm({ ...form, contraindications: e.target.value })} />
               </div>
-              <div className="input-group" style={{ gridColumn: '1/-1' }}>
+              <div className="input-group">
                 <label className="input-label">Interações medicamentosas</label>
                 <input className="input" value={form.interactions} onChange={(e) => setForm({ ...form, interactions: e.target.value })} />
               </div>
-              <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
                 <button className="btn btn-secondary" onClick={() => setShowNew(false)}>Cancelar</button>
                 <button className="btn btn-primary" disabled={!form.name || createMed.isPending} onClick={async () => {
                   await createMed.mutateAsync(form);
