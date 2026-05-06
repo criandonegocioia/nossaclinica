@@ -20,31 +20,30 @@ function ItemRow({ linha, onRemove, onQtdChange }: {
   const BRL = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
   return (
-    <div className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-gray-100 group">
-      <Icon size={14} className="text-gray-400 shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-800 truncate">{linha.itemNome}</p>
-        <p className="text-xs text-gray-400">{BRL(linha.precoUnitario)} / un</p>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: 'var(--white)', borderRadius: '8px', border: '1px solid var(--gray-200)' }}>
+      <Icon size={16} color="var(--gray-400)" style={{ flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--gray-800)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{linha.itemNome}</p>
+        <p style={{ fontSize: '12px', color: 'var(--gray-400)', margin: 0 }}>{BRL(linha.precoUnitario)} / un</p>
       </div>
-      <div className="flex items-center gap-2">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <input
           type="number"
           min={1}
           value={linha.quantidade}
           onChange={(e) => onQtdChange(Math.max(1, parseInt(e.target.value) || 1))}
-          aria-label={`Quantidade de ${linha.itemNome}`}
-          className="w-16 text-center text-sm border border-gray-200 rounded-md py-1 px-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          className="input"
+          style={{ width: '64px', textAlign: 'center', padding: '4px', minHeight: '32px' }}
         />
-        <span className="text-sm font-semibold text-gray-700 w-20 text-right">
+        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--gray-700)', width: '80px', textAlign: 'right' }}>
           {BRL(linha.totalLinha)}
         </span>
         <button
           type="button"
           onClick={onRemove}
-          aria-label={`Remover ${linha.itemNome}`}
-          className="p-1 rounded-md hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', color: 'var(--error-500)' }}
         >
-          <X size={12} />
+          <X size={14} />
         </button>
       </div>
     </div>
@@ -96,48 +95,48 @@ export function ItemCatalogoSelect({ value, onChange }: Props) {
   const total = value.reduce((s, l) => s + l.totalLinha, 0);
 
   return (
-    <div className="flex flex-col gap-2" ref={containerRef}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }} ref={containerRef}>
       {/* Search combobox */}
-      <div className="relative">
-        <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 bg-white focus-within:ring-2 focus-within:ring-blue-200">
-          <Search size={14} className="text-gray-400" />
+      <div style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--gray-300)', borderRadius: '8px', padding: '0 12px', background: 'var(--white)', height: '44px' }}>
+          <Search size={16} color="var(--gray-400)" />
           <input
             type="text"
             value={query}
             onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
             placeholder="Buscar produto ou medicamento..."
-            aria-label="Buscar itens do catálogo"
-            className="flex-1 text-sm bg-transparent outline-none placeholder-gray-400"
+            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '14px', height: '100%' }}
           />
         </div>
         {open && items.length > 0 && (
           <ul
-            role="listbox"
-            aria-label="Itens do catálogo"
-            className="absolute z-20 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-lg max-h-56 overflow-y-auto"
+            style={{ position: 'absolute', zIndex: 20, width: '100%', marginTop: '4px', background: 'var(--white)', border: '1px solid var(--gray-200)', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', maxHeight: '224px', overflowY: 'auto', padding: 0, listStyle: 'none' }}
           >
             {items.map((item) => {
               const Icon = item.tipo === 'MEDICAMENTO' ? Pill : Package;
               const selected = value.some((l) => l.itemId === item.id);
               return (
-                <li key={item.id} role="option" aria-selected={selected}>
+                <li key={item.id}>
                   <button
                     type="button"
                     disabled={selected}
                     onClick={() => addItem(item)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', textAlign: 'left',
+                      background: 'transparent', border: 'none', borderBottom: '1px solid var(--gray-100)', cursor: selected ? 'not-allowed' : 'pointer', opacity: selected ? 0.5 : 1
+                    }}
                   >
-                    <Icon size={14} className="text-gray-400 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{item.nome}</p>
-                      <p className="text-xs text-gray-400">{item.tipo} · {item.unidadeMedida}</p>
+                    <Icon size={14} color="var(--gray-400)" style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--gray-800)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.nome}</p>
+                      <p style={{ fontSize: '12px', color: 'var(--gray-400)', margin: 0 }}>{item.tipo} · {item.unidadeMedida}</p>
                     </div>
-                    <span className="text-xs font-semibold text-gray-600 shrink-0">
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gray-600)', flexShrink: 0 }}>
                       R$ {item.precoUnitario.toFixed(2)}
                     </span>
-                    {selected && <span className="text-xs text-emerald-500">✓</span>}
-                    {!selected && <Plus size={12} className="text-blue-400" />}
+                    {selected && <span style={{ fontSize: '12px', color: 'var(--success-500)' }}>✓</span>}
+                    {!selected && <Plus size={14} color="var(--primary-400)" />}
                   </button>
                 </li>
               );
@@ -148,7 +147,7 @@ export function ItemCatalogoSelect({ value, onChange }: Props) {
 
       {/* Linhas selecionadas */}
       {value.length > 0 && (
-        <div className="flex flex-col gap-1.5 bg-gray-50 rounded-xl p-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--gray-50)', borderRadius: '8px', padding: '12px', border: '1px solid var(--gray-200)' }}>
           {value.map((linha) => (
             <ItemRow
               key={linha.itemId}
@@ -157,8 +156,8 @@ export function ItemCatalogoSelect({ value, onChange }: Props) {
               onQtdChange={(q) => updateQtd(linha.itemId, q)}
             />
           ))}
-          <div className="flex justify-end pt-2 border-t border-gray-200 mt-1">
-            <span className="text-sm font-bold text-gray-800">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid var(--gray-200)', marginTop: '4px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gray-800)' }}>
               Total: R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>

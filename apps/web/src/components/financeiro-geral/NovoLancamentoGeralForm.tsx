@@ -12,27 +12,22 @@ interface Props {
   onDone: () => void;
 }
 
-// ── Paleta visual por operação ──────────────────────────────────────────────────
 const OPERACAO_CONFIG = {
   RECEITA: {
     label: 'Entrada (Receita)',
     icon: TrendingUp,
-    ring: 'ring-emerald-300',
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-700',
-    badge: 'bg-emerald-100 text-emerald-700',
-    border: 'border-emerald-200',
-    btnClass: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+    bg: 'var(--success-50)',
+    text: 'var(--success-600)',
+    border: 'var(--success-500)',
+    btnClass: 'btn btn-primary',
   },
   DESPESA: {
     label: 'Saída (Despesa)',
     icon: TrendingDown,
-    ring: 'ring-rose-300',
-    bg: 'bg-rose-50',
-    text: 'text-rose-700',
-    badge: 'bg-rose-100 text-rose-700',
-    border: 'border-rose-200',
-    btnClass: 'bg-rose-600 hover:bg-rose-700 text-white',
+    bg: 'var(--error-50)',
+    text: 'var(--error-600)',
+    border: 'var(--error-500)',
+    btnClass: 'btn btn-primary',
   },
 } as const;
 
@@ -79,9 +74,9 @@ export default function NovoLancamentoGeralForm({ onDone }: Props) {
   };
 
   return (
-    <div className={`rounded-2xl border-2 ${cfg.border} ${cfg.bg} p-6 transition-all duration-300`}>
+    <div className="card" style={{ padding: 'var(--space-6)', borderTop: `4px solid ${cfg.border}`, background: 'var(--white)' }}>
       {/* Toggle Receita / Despesa */}
-      <div className="flex gap-2 mb-6">
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
         {(['RECEITA', 'DESPESA'] as const).map((op) => {
           const c = OPERACAO_CONFIG[op];
           const Icon = c.icon;
@@ -92,7 +87,22 @@ export default function NovoLancamentoGeralForm({ onDone }: Props) {
               type="button"
               aria-pressed={active}
               onClick={() => setValue('operacao', op, { shouldValidate: true })}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-all border-2 ${active ? `${c.badge} ${c.border} shadow-sm` : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'}`}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '12px',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '14px',
+                border: active ? `2px solid ${c.border}` : '2px solid var(--gray-200)',
+                background: active ? c.bg : 'var(--white)',
+                color: active ? c.text : 'var(--gray-500)',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
             >
               <Icon size={16} /> {c.label}
             </button>
@@ -100,7 +110,7 @@ export default function NovoLancamentoGeralForm({ onDone }: Props) {
         })}
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* ── RECEITA ─────────────────────────────────────────────────────── */}
         {operacao === 'RECEITA' && (
           <>
@@ -165,17 +175,18 @@ export default function NovoLancamentoGeralForm({ onDone }: Props) {
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--gray-100)' }}>
           <button type="button" className="btn btn-secondary" onClick={onDone}>Cancelar</button>
           <button
             type="submit"
             disabled={create.isPending}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all ${cfg.btnClass}`}
+            className={cfg.btnClass}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             aria-label={`Salvar ${operacao === 'RECEITA' ? 'receita' : 'despesa'}`}
           >
             {create.isPending
               ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Salvando...</>
-              : <><Save size={14} /> Salvar {operacao === 'RECEITA' ? 'Receita' : 'Despesa'}</>}
+              : <><Save size={16} /> Salvar {operacao === 'RECEITA' ? 'Receita' : 'Despesa'}</>}
           </button>
         </div>
       </form>
