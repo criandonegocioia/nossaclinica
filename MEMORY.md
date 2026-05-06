@@ -2,28 +2,72 @@
 # O agente atualiza este arquivo ao final de cada sessão relevante
 
 ## Decisões de arquitetura tomadas
+
 - **Micro-Frontends para Tela de Paciente**: Refatoramos o monólito `pacientes/[id]/page.tsx` (que tinha mais de 2.000 linhas) aplicando os padrões do Next.js 14.
-- As abas (`prontuario`, `fotos`, `documentos`, `anamnese`, `financeiro`, `agendamentos`) agora operam como componentes isolados, em sua maioria carregados com `React.lazy` e envoltos por um `Suspense` com seus respectivos `loading.tsx` (esqueletos).
-- Arquivos de form de inserção (como `BudgetBuilder`, `NewDocumentInline`, `NewFinanceInline`, `NewScheduleInline`) foram corrigidos para manter o correto escape de Template Strings que quebravam o build de Client Components.
+- As abas (`prontuario`, `fotos`, `documentos`, `anamnese`, `financeiro`, `agendamentos`) operam como componentes isolados, a maioria carregada com `React.lazy` e envolta por `Suspense` com esqueletos próprios.
+- **Arquivos legados deletados**: `_legacy-forms.tsx` (1.371 linhas) e `_page-legacy.tsx` (2.501 linhas) foram removidos definitivamente após confirmação de zero referências.
+
+## Módulo Financeiro (refatorado 05/05/2026)
+
+### Arquitetura do novo formulário
+```
+components/pacientes/financeiro/novo-lancamento/
+  types.ts              → Zod schema + funções de cálculo puras (calcItemFinal, calcTotal...)
+  ProcedimentosCart.tsx → Picker + tabela-carrinho com useFieldArray + desconto por item
+  ResumoEAcoes.tsx      → Barra de totais + campanhas + campos pagamento + ações pós-save
+  NovoLancamentoForm.tsx → Orquestrador FormProvider + reduce carrinho → payload flat
+```
+
+### Regras de negócio implementadas
+- Desconto individual por procedimento (%, R$ fixo, ou nenhum)
+- Desconto global sobre subtotal (%, R$ fixo)
+- Campanhas promocionais (filtradas por data ativa)
+- `onSubmit` reduce itens → `description` concatenada + `amount` total para mutation
+- Pós-save: botões de PDF, E-mail, WhatsApp
+
+## Endpoint de Procedimentos (backend)
+
+- **Criado**: `GET /schedules/procedures` no `SchedulingController` do NestJS
+- **Serviço**: `SchedulingService.findProcedures()` busca tabela `Procedure` com filtros `active` e `category`
+- **Hook**: `useProcedures()` em `useApi.ts` — URL correta, retorno tipado `ApiProcedure[]`, `staleTime: 5min`
+- **Interface `ApiProcedure`**: `id`, `code`, `name`, `priceDefault`, `category`, `colorCode`, `active`, `durationDefault?`
 
 ## Problemas conhecidos / Resolvidos
-- **Download de PDF:** O utilitário `getApiBaseUrl()` foi corrigido no frontend para não redirecionar URLs de assets gerados para `localhost:3000` na visualização/download de PDFs, apontando corretamente para o servidor NestJS na porta `3001` nos ambientes de desenvolvimento.
-- **Anamnese em JSON:** Adicionado o processamento para desserializar corretamente campos em String JSON, que antes quebravam a tela se exibidos com status "preenchida".
-- **Lançamentos Financeiros e Permissões:** Atualizados os "guards" do NestJS na controller de finanças (`FinanceController`) para habilitar adequadamente acesso às funções de inserção/edição pelos papéis `RECEPCAO` e `DENTISTA`.
-- **Galerias de Fotos:** Refatoradas para agrupar visualmente fotos por categoria com UX aprimorado. 
+
+- **Download de PDF**: `getApiBaseUrl()` foi corrigido para não redirecionar para `localhost:3000`.
+- **Anamnese em JSON**: Desserialização adicionada para campos em String JSON.
+- **Lançamentos Financeiros**: Guards do NestJS atualizados para `RECEPCAO` e `DENTISTA`.
+- **Galerias de Fotos**: Reagrupamento visual por categoria implementado.
+- **useProcedures**: Todos os arquivos que usavam `procsRes?.data` foram corrigidos para o padrão direto (`ApiProcedure[]`).
 
 ## Componentes shared já criados
-- **UI de Paciente**: `Field`, `InlineFormHeader`, constantes globais como `ProcedurePrice`, `PHOTO_CATEGORIES`.
+
+- `Field`, `InlineFormHeader` em `components/pacientes/shared/ui.tsx`
+- Constantes globais: `INITIAL_PROCEDURE_PRICES`, `INITIAL_CAMPAIGNS`, `PHOTO_CATEGORIES`
 
 ## Hooks já implementados
-- Diversos endpoints na camada de cliente e hooks da API no modelo padrão (`useCreateFinance`, `useCreateDocument`, `useCreateSchedule`, etc).
+
+- `useCreateFinance`, `useCreateDocument`, `useCreateSchedule`, `useProcedures`, `useRooms`, `useUsers`, etc.
 
 ## Última sessão
+
 - **Data:** 05/05/2026
 - **O que foi feito:**
-  - Diagnóstico e reparação de erros cruciais de lint e TypeScript (`TS1127`, `TS1005`, `TS2304`) causados por quebras e escapes indevidos de backticks (` \` `) e cifrões (` \$ `) em interpolações do React (como no form de geração de PDFs).
-  - Testes do compilador do TypeScript validados 100% de sucesso sem erros de sintaxe ou tipagem.
-  - Subida do Backend e Frontend via `pnpm dev` em background e estabilização de rotas.
+  - Implementação completa do módulo `NovoLancamentoForm` (Zod + react-hook-form + useFieldArray)
+  - Criação do endpoint `/schedules/procedures` no NestJS
+  - Tipagem de `useProcedures()` com `ApiProcedure[]` e fallback mock
+  - Remoção de `NewFinanceInline.tsx`, `_legacy-forms.tsx`, `_page-legacy.tsx`
+  - TypeScript: `Exit code: 0` — zero erros em todo o frontend
+  - 4 commits + push
+
 - **O que ficou pendente:**
-  - O usuário precisa validar visualmente no navegador as novas abas de fotos, prontuários, e confirmar o fluxo de Imprimir/Salvar PDF para fechar essa sprint.
-  - Auditar futuramente outras páginas além da tela do paciente se seguem a regra LGPD e ausência de localStorage para JWT.
+  - Validar visualmente o novo carrinho em produção (badge `✓ N procedimentos do banco`)
+  - Testar fluxo de PDF em Documentos
+  - Auditoria LGPD de outras telas (CRM, HOF, Auditoria) — baixa prioridade
+
+## Notas importantes para próximas sessões
+
+- **NÃO usar TailwindCSS** — o projeto usa design system CSS customizado com variáveis (`globals.css`)
+- **Classes disponíveis**: `.card`, `.card-body`, `.input`, `.btn`, `.btn-primary`, `.btn-ghost`, `.btn-sm`, `.table`, `.table-container`, `.input-group`, `.input-label`, `.grid`, `.grid-2`, `.badge`, `.spinner`, `.avatar`
+- **Limite de 120 linhas** por arquivo de componente (regra do AGENTS.md)
+- **Cálculos financeiros**: lógica pura em `types.ts`, não inline no componente
