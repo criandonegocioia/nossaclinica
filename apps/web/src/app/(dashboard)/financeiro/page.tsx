@@ -7,6 +7,7 @@ import {
   Smartphone, Building2, ArrowUpRight, ArrowDownRight, RefreshCw, X, Printer, FileText, Save,
 } from 'lucide-react';
 import { useFinances, useFinanceSummary, useUpdateFinanceStatus, useCreateFinance, usePatients } from '@/hooks/useApi';
+import NovoLancamentoGeralForm from '@/components/financeiro-geral/NovoLancamentoGeralForm';
 
 const PAYMENT_ICONS: Record<string, typeof CreditCard> = {
   PIX: Smartphone, CARTAO_CREDITO: CreditCard, CARTAO_DEBITO: CreditCard,
@@ -362,69 +363,17 @@ export default function FinanceiroPage() {
         </div>
       )}
 
-      {/* Inline: Novo Lançamento */}
       {showNew && (
         <div style={{ marginBottom: 'var(--space-6)' }}>
-          <div className="card" style={{ animation: 'fadeInUp 0.3s ease' }}>
-            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}><Plus size={18} /> Novo Lançamento</h3>
-              <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowNew(false)}><X size={18} /></button>
-            </div>
-            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              
-              <div className="form-group">
-                <label className="label">Paciente</label>
-                <select className="input" value={form.patientId} onChange={e => setForm({ ...form, patientId: e.target.value })}>
-                  <option value="">Selecione o paciente...</option>
-                  {patientsList.map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="label">Descrição / Referência</label>
-                <input type="text" className="input" placeholder="Ex: Consulta, Procedimento..." 
-                  value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-              </div>
-
-              <div className="grid grid-2" style={{ gap: 'var(--space-4)' }}>
-                <div className="form-group">
-                  <label className="label">Valor (R$)</label>
-                  <input type="number" className="input" placeholder="0.00" step="0.01" 
-                    value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label className="label">Vencimento</label>
-                  <input type="date" className="input" 
-                    value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} />
-                </div>
-              </div>
-
-              <div className="grid grid-2" style={{ gap: 'var(--space-4)' }}>
-                <div className="form-group">
-                  <label className="label">Status</label>
-                  <select className="input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                    <option value="PENDENTE">Pendente</option>
-                    <option value="PAGO">Pago</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="label">Método</label>
-                  <select className="input" value={form.paymentMethod} onChange={e => setForm({ ...form, paymentMethod: e.target.value })}>
-                    {Object.entries(PAYMENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                  </select>
-                </div>
-              </div>
-
-            </div>
-            <div className="card-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
-              <button className="btn btn-secondary" onClick={() => setShowNew(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleCreate} disabled={createFinance.isPending}>
-                {createFinance.isPending ? <span className="spinner spinner-sm" /> : <Save size={16} />} Salvar Lançamento
-              </button>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+            <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--font-semibold)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <Plus size={18} /> Novo Lançamento
+            </h3>
+            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setShowNew(false)} aria-label="Fechar">
+              <X size={18} />
+            </button>
           </div>
+          <NovoLancamentoGeralForm onDone={() => setShowNew(false)} />
         </div>
       )}
     </>

@@ -757,3 +757,23 @@ export function useFinalizeMedicalRecord() {
   });
 }
 
+// =============================================
+// Catalog Hooks (Unified Products + Medications)
+// =============================================
+
+interface CatalogParams {
+  search?: string;
+  tipo?: 'MATERIAL' | 'MEDICAMENTO';
+  limit?: number;
+}
+
+export function useCatalogItems(params: CatalogParams = {}) {
+  return useQuery({
+    queryKey: ['catalog-items', params],
+    queryFn: async () => {
+      const res = await api.get('/catalog/items', { params });
+      return res.data;
+    },
+    staleTime: 60_000,
+  });
+}
