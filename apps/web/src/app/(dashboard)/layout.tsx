@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
 import { Providers } from '@/lib/providers';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TopBar } from '@/components/layout/TopBar';
+import { Menu } from 'lucide-react';
 
 export default function DashboardLayout({
   children,
@@ -14,6 +15,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, isLoading, initialize } = useAuthStore();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     initialize();
@@ -24,6 +26,28 @@ export default function DashboardLayout({
       router.push('/login');
     }
   }, [isLoading, isAuthenticated, router]);
+
+  // Close mobile menu on route change
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
+
+  // Close on resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768) setMobileMenuOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileMenuOpen]);
 
   if (isLoading) {
     return (
@@ -53,9 +77,23 @@ export default function DashboardLayout({
   return (
     <Providers>
       <div className="app-layout">
-        <Sidebar />
+        {/* Mobile overlay */}
+        <div
+          className={`sidebar-mobile-overlay ${mobileMenuOpen ? 'visible' : ''}`}
+          onClick={closeMobileMenu}
+          aria-hidden="true"
+        />
+
+        {/* Sidebar with mobile-open class */}
+        <Sidebar
+          mobileOpen={mobileMenuOpen}
+          onMobileClose={closeMobileMenu}
+        />
+
         <main className="main-content">
-          <TopBar />
+          <TopBar
+            onMobileMenuToggle={() => setMobileMenuOpen((v) => !v)}
+          />
           <div className="page-content">
             {children}
           </div>

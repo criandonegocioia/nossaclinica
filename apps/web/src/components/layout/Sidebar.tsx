@@ -23,7 +23,7 @@ import {
   Pill,
   Kanban,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth';
 
 const NAV_SECTIONS = [
@@ -64,7 +64,7 @@ const NAV_SECTIONS = [
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: boolean; onMobileClose?: () => void }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { user, logout } = useAuthStore();
@@ -74,8 +74,14 @@ export function Sidebar() {
     return pathname.startsWith(href);
   };
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    onMobileClose?.();
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
+
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">

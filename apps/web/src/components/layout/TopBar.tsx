@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Menu } from 'lucide-react';
 import { GlobalSearch } from './GlobalSearch';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
@@ -21,7 +21,7 @@ const ROUTE_LABELS: Record<string, string> = {
   '/auditoria': 'Auditoria',
 };
 
-export function TopBar() {
+export function TopBar({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void }) {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
 
@@ -42,6 +42,14 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div className="topbar-left">
+        {/* Mobile hamburger */}
+        <button
+          className="mobile-menu-btn"
+          onClick={onMobileMenuToggle}
+          aria-label="Abrir menu de navegação"
+        >
+          <Menu size={22} />
+        </button>
         {/* Breadcrumb */}
         <nav className="topbar-breadcrumb">
           <a href="/">Início</a>
