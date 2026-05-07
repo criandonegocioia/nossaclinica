@@ -17,6 +17,7 @@
 - `.specs/decisions/001-css-proprietario-zero-tailwind.md` — Sistema de estilos
 - `.specs/decisions/002-zero-modais-inline-expansion.md` — Padrão de UX/formulários
 - `.specs/decisions/005-limite-120-linhas-componentes.md` — Arquitetura de componentes
+- `.specs/decisions/006-apple-hig-design-system.md` — **Design System Apple HIG (OBRIGATÓRIO)**
 
 ## Regras Permanentes de Arquitetura
 Todo código gerado neste projeto DEVE seguir:
@@ -47,8 +48,17 @@ Todo código gerado neste projeto DEVE seguir:
 
 ## Regras Permanentes de UX/Design
 - **Proibição Estrita de TailwindCSS**: O projeto utiliza um sistema CSS proprietário. É **ESTRITAMENTE PROIBIDO** utilizar classes utilitárias típicas do TailwindCSS (`flex`, `p-4`, `mb-2`, `text-center`, etc). O uso dessas classes resultará em falhas graves de layout.
+- **Design System Apple HIG**: Toda interface DEVE seguir o padrão Apple Human Interface Guidelines conforme ADR-006. Regras invioláveis:
+  - **Cards**: `border: none` + `shadow-card` multicamada. NUNCA usar `border: 1px solid`.
+  - **Botões**: Cor sólida flat. PROIBIDO `linear-gradient` e `box-shadow` decorativo.
+  - **Inputs**: `background: var(--gray-50)` no estado neutro, transição para branco no hover/focus.
+  - **Sombras**: Sempre 2-3 camadas com opacidade 0.02-0.06. PROIBIDO sombras single-layer.
+  - **Sidebar**: Glassmorphism (`backdrop-filter: blur(40px) saturate(180%)`).
+  - **Topbar**: Vibrancy (`backdrop-filter: blur(20px) saturate(180%)`).
+  - **Cores**: Usar exclusivamente os tokens da paleta Apple definidos em `globals.css`. PROIBIDO inventar novos hex.
+  - **Animações**: `--ease-out` com `scale()` sutil. PROIBIDO `translateY` exagerado.
 - **Sistema de Classes e Inline Styles**: Utilize as classes globais estabelecidas (`.card`, `.input`, `.btn`, `.btn-primary`, `.grid-2`, etc). Para alinhamentos ou espaçamentos que não possuam classe definida, aplique **inline styles** usando as variáveis nativas (ex: `style={{ display: 'flex', gap: '8px', padding: 'var(--space-4)' }}`).
-- **Tipografia**: Manutenção de hierarquia em três níveis (heading/body/caption), vetando tamanhos de fonte inferiores a 13px.
+- **Tipografia**: SF Pro Display/Text → Inter fallback. Manutenção de hierarquia em três níveis (heading/body/caption), vetando tamanhos de fonte inferiores a 11px.
 - **Acessibilidade Absoluta**: Toda área interativa demanda `aria-label`, anéis de foco visíveis (`focus-visible ring`) e contraste compatível com a diretriz AA.
 - **Feedback de Estado Multidimensional**: Elementos de ação (botões/formulários) mapeiam explicitamente os estados `loading`, `error`, `success` e `disabled`.
 
@@ -60,7 +70,7 @@ Todo código gerado neste projeto DEVE seguir:
 | Criar/Refatorar Formulário (Client) | `@nextjs` `@react-hook-form` `@typescript-expert` |
 | Validar/Criar Contratos API | `@nestjs` `@zod` `@typescript-expert` |
 | Modelagem de Banco de Dados | `@prisma` `@postgres` `@senior-architect` |
-| Novo Design / Componente UI | `@frontend-design` `@interaction-design` (Zero Tailwind) |
+| Novo Design / Componente UI | `@apple-hig-design` `@frontend-design` (Zero Tailwind, ADR-006) |
 | Segurança, Autenticação e LGPD | `@security-auditor` |
 | Auditoria de Interface | `@web-design-guidelines` `@senior-frontend` |
 

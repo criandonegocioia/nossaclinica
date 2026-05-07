@@ -7,6 +7,7 @@
 - As abas (`prontuario`, `fotos`, `documentos`, `anamnese`, `financeiro`, `agendamentos`) operam como componentes isolados, a maioria carregada com `React.lazy` e envolta por `Suspense` com esqueletos próprios.
 - **Arquivos legados deletados**: `_legacy-forms.tsx` (1.371 linhas) e `_page-legacy.tsx` (2.501 linhas) foram removidos definitivamente após confirmação de zero referências.
 - **SDD Implantado (07/05/2026)**: Estrutura Spec-Driven Development adicionada ao repositório em `.specs/`. Toda nova feature segue o ciclo SPEC → REVIEW → IMPLEMENT → DONE.
+- **Apple HIG Design System (07/05/2026)**: Design system refatorado para seguir Apple Human Interface Guidelines. Glassmorphism sidebar, vibrancy topbar, borderless cards, flat buttons, multi-layer shadows. ADR-006 é leitura obrigatória.
 
 ## Módulo Financeiro (refatorado 05/05/2026)
 
@@ -81,6 +82,7 @@ components/financeiro-geral/
     003-workflow-multi-llm-tokens.md
     004-agendamento-retorno-automatico.md
     005-limite-120-linhas-componentes.md
+    006-apple-hig-design-system.md    ← **Design visual Apple HIG (OBRIGATÓRIO)**
     006-supabase-prisma-stack-dados.md
   features/
     _TEMPLATE.md               ← Copiar para novas features
@@ -91,25 +93,32 @@ components/financeiro-geral/
 
 ## Última sessão
 
-- **Data:** 07/05/2026
+- **Data:** 07/05/2026 (sessão 2)
 - **O que foi feito:**
-  - Implantação completa do SDD: estrutura `.specs/`, 6 ADRs das decisões vigentes, template de feature spec.
-  - Regra SDD adicionada ao `AGENTS.md` (leitura obrigatória de ADRs antes de implementar).
-  - Skill `agendamento-retorno` criada em `.agents/skills/`.
-  - Workflow Multi-LLM de otimização de tokens documentado em `AGENTS.md` e ADR-003.
-  - Import corrigido em `financeiro/page.tsx`: `NovoLancamentoGeral` → `NovoLancamentoGeralForm`.
+  - **Layout Mobile Responsivo**: Media queries em 3 breakpoints (1024/768/480px), hamburger menu, sidebar overlay, scroll-snap no Kanban CRM.
+  - **Apple HIG Design System**: Refatoração completa do `globals.css` — cores desaturadas, glassmorphism sidebar, vibrancy topbar, borderless cards, flat buttons, multi-layer shadows.
+  - ADR-006 criado e adicionado como leitura obrigatória no AGENTS.md.
+  - CRM responsivo: KPIs, kanban snap-scroll, detail contact grid, action buttons.
 
 - **O que ficou pendente:**
   - Validar visualmente o carrinho de procedimentos em produção
   - Testar fluxo de PDF em Documentos
   - Auditoria LGPD de outras telas (CRM, HOF, Auditoria) — baixa prioridade
-  - Verificar se componente `NovoLancamentoGeralForm` existe em `components/financeiro-geral/`
 
 ## Notas importantes para próximas sessões
 
 - **PROIBIÇÃO ABSOLUTA DE TAILWINDCSS**: O projeto NÃO utiliza e NÃO suporta classes utilitárias clássicas do Tailwind (`flex`, `mb-4`, `p-2`, `bg-blue-50`). Usá-las quebra o layout.
-- **Como estilizar**: Classes nativas (`.card`, `.input`, `.btn`, `.grid-2`) + **inline styles** com variáveis CSS para o restante.
-- **Classes disponíveis (`globals.css`)**: `.card`, `.card-body`, `.input`, `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-sm`, `.table`, `.table-container`, `.input-group`, `.input-label`, `.grid`, `.grid-2`, `.badge`, `.spinner`, `.avatar`.
+- **Design System Apple HIG (ADR-006)**: TODA nova interface DEVE seguir os padrões Apple. Resumo:
+  - Cards: `border: none` + `shadow-card` multicamada
+  - Botões: Flat, sem gradiente, sem shadow decorativo
+  - Inputs: `background: var(--gray-50)`, hover → white
+  - Sombras: 2-3 camadas, opacidade 0.02-0.06
+  - Sidebar: Glassmorphism (blur 40px + saturate 180%)
+  - Topbar: Vibrancy (blur 20px + saturate 180%)
+  - Tipografia: SF Pro Display → Inter fallback
+  - Cores: APENAS tokens da paleta Apple em `globals.css`
+- **Como estilizar**: Classes nativas (`.card`, `.input`, `.btn`, `.btn-primary`, `.grid-2`) + **inline styles** com variáveis CSS para o restante.
+- **Classes disponíveis (`globals.css`)**: `.card`, `.card-body`, `.input`, `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.btn-sm`, `.table`, `.table-container`, `.input-group`, `.input-label`, `.grid`, `.grid-2`, `.badge`, `.spinner`, `.avatar`, `.crm-kpis`, `.crm-kanban`, `.crm-detail-contact`, `.crm-detail-actions`.
 - **Limite de 120 linhas** por arquivo de componente (ADR-005)
 - **Cálculos financeiros**: lógica pura em `types.ts`, não inline no componente
 - **Banco de Dados (Produção)**: Supabase. Migrations aplicadas via SQL Editor do Supabase ou CLI com `DATABASE_URL` correta.
