@@ -58,6 +58,9 @@ components/pacientes/financeiro/novo-lancamento/
   - Remoção de lixo de código e transição completa para o CSS proprietário nativo.
   - Estabelecimento da regra absoluta de banimento do TailwindCSS (`AGENTS.md` e `MEMORY.md` atualizados).
   - Configuração do RECIBO via modal multicanal (WhatsApp/E-mail/PDF).
+  - Criação da skill `agendamento-retorno` para automação de consultas de retorno atreladas a procedimentos.
+  - Implementação da lógica de agendamento automático no `NovoAtendimentoForm`.
+  - Definição de workflow de otimização de tokens (uso de Multi-LLM para imagens) no `AGENTS.md`.
 
 - **O que ficou pendente:**
   - Validar visualmente o novo carrinho em produção (badge `✓ N procedimentos do banco`)

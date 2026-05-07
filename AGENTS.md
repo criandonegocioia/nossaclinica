@@ -77,3 +77,16 @@ hooks/
   shared/
     useAuth.ts                 ← Autenticação e sessão
     useToast.ts                ← Notificações globais
+
+## Otimização de Tokens e Uso de Imagens
+Para maximizar a eficiência e economizar tokens, utilize o seguinte workflow:
+
+1. **Workflow de Imagens (Multi-LLM)**:
+   - **Fase 1 (Análise)**: Use modelos rápidos e baratos (ex: `Gemini 1.5 Flash` ou `GPT-4o mini`) para descrever screenshots ou wireframes.
+   - **Fase 2 (Implementação)**: Copie a descrição textual gerada e envie para o `Claude Sonnet` para a codificação. Isso reduz o custo de processamento de imagens em modelos caros.
+   
+2. **Estratégias de Economia**:
+   - **Contexto Preciso**: Seja direto. Referencie arquivos específicos em vez de fornecer contextos genéricos.
+   - **Novas Conversas**: Inicie novas conversas para módulos diferentes para evitar o acúmulo de contexto irrelevante (tokens de histórico).
+   - **Uso de Skills**: Utilize a skill `@zipai-optimizer` para filtragem automática de output e contexto.
+   - **Imagens**: Evite enviar imagens de alta resolução se uma descrição textual for suficiente para a tarefa.
