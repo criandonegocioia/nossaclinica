@@ -6,6 +6,18 @@
 - **Stack**: Next.js 14 App Router · TypeScript · TailwindCSS · NestJS · Supabase/Prisma
 - **Monorepo**: apps/web (frontend) · apps/api (backend) · shared/
 
+## Workflow SDD (Spec-Driven Development)
+**ANTES de implementar qualquer feature nova**, o agente DEVE:
+1. Verificar se existe spec em `.specs/active/` ou `.specs/features/` para a tarefa
+2. Ler os ADRs relevantes em `.specs/decisions/` para respeitar decisões vigentes
+3. Se não houver spec, criar `implementation_plan.md` e solicitar aprovação antes de codar
+4. Após conclusão, registrar a spec em `.specs/done/`
+
+**ADRs obrigatórios de leitura antes de qualquer implementação:**
+- `.specs/decisions/001-css-proprietario-zero-tailwind.md` — Sistema de estilos
+- `.specs/decisions/002-zero-modais-inline-expansion.md` — Padrão de UX/formulários
+- `.specs/decisions/005-limite-120-linhas-componentes.md` — Arquitetura de componentes
+
 ## Regras Permanentes de Arquitetura
 Todo código gerado neste projeto DEVE seguir:
 
