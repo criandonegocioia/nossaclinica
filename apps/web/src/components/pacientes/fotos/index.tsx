@@ -6,7 +6,9 @@ import { usePatientPhotos, useUploadPhoto } from '@/hooks/useApi';
 import { InlineFormHeader, Field, EmptyState } from '../shared/ui';
 import { PHOTO_CATEGORIES } from '../shared/types';
 import { getApiBaseUrl } from '@/lib/api';
+import PhotoLightbox from './PhotoLightbox';
 import type { TabComponentProps, Photo, PhotoCategory } from '../shared/types';
+import type { LightboxPhoto } from './types';
 
 // ── Upload Form ────────────────────────────────────────────────────────────────
 function UploadForm({ patientId, onDone }: { patientId: string; onDone: () => void }) {
@@ -90,7 +92,17 @@ function Gallery({ photos, onUpload }: { photos: Photo[]; onUpload: () => void }
   
   const allCategories = Object.keys(PHOTO_CATEGORIES) as PhotoCategory[];
   const [activeCat, setActiveCat] = useState<PhotoCategory | null>(null);
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  /* Build lightbox photos for active category */
+  const catPhotos = activeCat ? (grouped[activeCat] || []) : [];
+  const lightboxPhotos: LightboxPhoto[] = catPhotos.map((p) => ({
+    id: p.id,
+    src: p.url || `${getApiBaseUrl()}/api/photos/${p.id}/content`,
+    description: p.description,
+    date: new Date(p.createdAt).toLocaleDateString('pt-BR'),
+    category: activeCat || undefined,
+  }));
 
   return (
     <>
@@ -106,26 +118,17 @@ function Gallery({ photos, onUpload }: { photos: Photo[]; onUpload: () => void }
               <div 
                 key={cat} 
                 onClick={() => setActiveCat(cat)}
-                style={{ 
-                  borderRadius: 'var(--radius-xl)', 
-                  border: '1px solid var(--gray-200)', 
-                  overflow: 'hidden', 
-                  cursor: 'pointer', 
-                  transition: 'all 0.2s ease',
-                  background: 'white',
-                  animation: `fadeInUp 0.3s ease backwards ${i * 40}ms`
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = color; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = `0 8px 24px ${color}15`; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--gray-200)'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
+                className="card"
+                style={{ cursor: 'pointer', animation: `fadeInUp 0.3s ease backwards ${i * 40}ms` }}
               >
-                <div style={{ height: 120, background: previewSrc ? `url(${previewSrc}) center/cover` : 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                <div style={{ height: 120, background: previewSrc ? `url(${previewSrc}) center/cover` : 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: 'var(--radius-2xl) var(--radius-2xl) 0 0' }}>
                   {!previewSrc && <Camera size={32} style={{ color: 'var(--gray-300)' }} />}
-                  {previewSrc && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)' }} />}
+                  {previewSrc && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.35), transparent)', borderRadius: 'var(--radius-2xl) var(--radius-2xl) 0 0' }} />}
                 </div>
-                <div style={{ padding: 'var(--space-3)' }}>
+                <div style={{ padding: 'var(--space-3) var(--space-4)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <h4 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--gray-800)' }}>{label}</h4>
-                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: count > 0 ? color : 'var(--gray-400)', background: count > 0 ? `${color}15` : 'var(--gray-100)', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
+                    <h4 style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--gray-800)' }}>{label}</h4>
+                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: count > 0 ? color : 'var(--gray-400)', background: count > 0 ? `${color}12` : 'var(--gray-100)', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
                       {count} {count === 1 ? 'foto' : 'fotos'}
                     </span>
                   </div>
@@ -144,26 +147,26 @@ function Gallery({ photos, onUpload }: { photos: Photo[]; onUpload: () => void }
               {PHOTO_CATEGORIES[activeCat].label}
             </h3>
             <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>
-              ({grouped[activeCat]?.length || 0} {(grouped[activeCat]?.length || 0) === 1 ? 'foto' : 'fotos'})
+              ({catPhotos.length} {catPhotos.length === 1 ? 'foto' : 'fotos'})
             </span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 'var(--space-3)' }}>
-            {(grouped[activeCat] || []).map((p, i) => {
+            {catPhotos.map((p, i) => {
               const src = p.url || `${getApiBaseUrl()}/api/photos/${p.id}/content`;
               return (
-                <div key={p.id} onClick={() => setLightbox(src)} style={{ position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden', aspectRatio: '1', background: 'var(--gray-100)', cursor: 'zoom-in', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', transition: 'transform 0.15s ease', animation: `fadeIn 0.3s ease backwards ${i * 40}ms` }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.02)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; }}>
+                <div key={p.id} onClick={() => setLightboxIndex(i)} style={{ position: 'relative', borderRadius: 'var(--radius-xl)', overflow: 'hidden', aspectRatio: '1', background: 'var(--gray-100)', cursor: 'zoom-in', boxShadow: 'var(--shadow-card)', transition: 'all 0.2s var(--ease-out)', animation: `fadeIn 0.3s ease backwards ${i * 40}ms` }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.03)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card-hover)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card)'; }}>
                   <img src={src} alt={p.description || p.category} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 8px', background: 'linear-gradient(transparent, rgba(0,0,0,0.65))', color: 'white' }}>
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '6px 8px', background: 'linear-gradient(transparent, rgba(0,0,0,0.55))', color: 'white' }}>
                     <div style={{ fontSize: 10, opacity: 0.85 }}>{new Date(p.createdAt).toLocaleDateString('pt-BR')}</div>
                     {p.description && <div style={{ fontSize: 11, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.description}</div>}
                   </div>
                 </div>
               );
             })}
-            <button onClick={onUpload} style={{ borderRadius: 'var(--radius-lg)', aspectRatio: '1', border: '2px dashed var(--gray-200)', background: 'var(--gray-25)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)', cursor: 'pointer', color: 'var(--gray-400)', fontSize: 'var(--text-xs)', transition: 'all 0.15s ease' }}>
+            <button onClick={onUpload} style={{ borderRadius: 'var(--radius-xl)', aspectRatio: '1', border: '2px dashed var(--gray-200)', background: 'var(--gray-25)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)', cursor: 'pointer', color: 'var(--gray-400)', fontSize: 'var(--text-xs)', transition: 'all 0.15s ease' }}>
               <Camera size={24} />
               <span>Adicionar</span>
             </button>
@@ -171,12 +174,14 @@ function Gallery({ photos, onUpload }: { photos: Photo[]; onUpload: () => void }
         </div>
       )}
 
-      {/* Lightbox */}
-      {lightbox && (
-        <div onClick={() => setLightbox(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out', animation: 'fadeIn 0.15s ease' }}>
-          <img src={lightbox} alt="Foto ampliada" style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: 'var(--radius-xl)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }} />
-          <button onClick={() => setLightbox(null)} style={{ position: 'absolute', top: 20, right: 20, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 40, height: 40, color: 'white', cursor: 'pointer', fontSize: 20 }}>✕</button>
-        </div>
+      {/* Apple-style Lightbox with navigation */}
+      {lightboxIndex !== null && lightboxPhotos.length > 0 && (
+        <PhotoLightbox
+          photos={lightboxPhotos}
+          currentIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onNavigate={setLightboxIndex}
+        />
       )}
     </>
   );
