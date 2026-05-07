@@ -92,13 +92,18 @@ export function NovoAtendimentoForm({ patientId, onDone, editingRecord }: NovoAt
     }
 
     if (data.nextReturn && user?.id && !isDraft) {
-      await scheduleCreate.mutateAsync({
-        patientId,
-        professionalId: user.id,
-        startAt: new Date(data.nextReturn + 'T08:00:00').toISOString(),
-        endAt: new Date(data.nextReturn + 'T09:00:00').toISOString(),
-        notes: 'Retorno agendado via Prontuário',
-      });
+      try {
+        await scheduleCreate.mutateAsync({
+          patientId,
+          professionalId: user.id,
+          startAt: new Date(data.nextReturn + 'T08:00:00').toISOString(),
+          endAt: new Date(data.nextReturn + 'T09:00:00').toISOString(),
+          notes: procNames ? `Retorno - Ref: ${procNames}` : 'Retorno agendado via Prontuário',
+        });
+      } catch (err) {
+        console.error('Erro ao agendar retorno automático', err);
+        // Não bloqueia a finalização se o agendamento falhar
+      }
     }
 
     onDone();
