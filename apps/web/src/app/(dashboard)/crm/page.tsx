@@ -228,7 +228,7 @@ export default function CRMPage() {
 
           <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
             {/* Contact info */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-3)' }}>
+            <div className="crm-detail-contact">
               {detailLead.phone && <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-sm)', color: 'var(--gray-700)' }}><Phone size={14} style={{ color: 'var(--gray-400)' }} />{detailLead.phone}</div>}
               {detailLead.email && <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-sm)', color: 'var(--gray-700)' }}><Mail size={14} style={{ color: 'var(--gray-400)' }} />{detailLead.email}</div>}
               {detailLead.instagram && <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-sm)', color: 'var(--gray-700)' }}><Instagram size={14} style={{ color: 'var(--gray-400)' }} />{detailLead.instagram}</div>}
@@ -264,7 +264,7 @@ export default function CRMPage() {
             </div>
 
             {/* Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-3)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--gray-100)' }}>
+            <div className="crm-detail-actions">
               <button className="btn btn-secondary" onClick={backToKanban}>Voltar ao Funil</button>
               <button className="btn btn-primary" onClick={() => {
                 convertLead.mutate(detailLead.id);
@@ -300,7 +300,7 @@ export default function CRMPage() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+      <div className="crm-kpis">
         {[
           { label: 'Total de Leads', value: total, color: 'var(--primary-600)', icon: Users },
           { label: 'Pipeline (R$)', value: `R$ ${pipeline.toLocaleString('pt-BR')}`, color: 'var(--warning-600)', icon: DollarSign },
@@ -323,7 +323,7 @@ export default function CRMPage() {
       </div>
 
       {/* Kanban Board */}
-      <div style={{ display: 'flex', gap: 'var(--space-3)', overflowX: 'auto', paddingBottom: 'var(--space-4)', minHeight: 480 }}>
+      <div className="crm-kanban">
         {STAGES.map((stage) => {
           const colLeads = leads.filter((l) => l.status === stage.id);
           return (
@@ -332,7 +332,6 @@ export default function CRMPage() {
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(stage.id)}
               style={{
-                minWidth: 220, maxWidth: 220, flexShrink: 0,
                 background: 'var(--gray-50)', borderRadius: 'var(--radius-xl)',
                 padding: 'var(--space-3)', border: '2px dashed transparent',
                 transition: 'border-color 0.15s ease',

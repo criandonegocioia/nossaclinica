@@ -1625,6 +1625,101 @@ img {
 }
 
 /* =============================================
+   CRM / KANBAN
+   ============================================= */
+
+/* KPIs row */
+.crm-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+/* Kanban board */
+.crm-kanban {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  padding-bottom: var(--space-4);
+  min-height: 480px;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+
+.crm-kanban > div {
+  min-width: 220px;
+  max-width: 220px;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+}
+
+/* Detail: contact info */
+.crm-detail-contact {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+/* Detail: action buttons */
+.crm-detail-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--gray-100);
+}
+
+@media (max-width: 1024px) {
+  .crm-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .crm-kpis {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .crm-kanban {
+    min-height: 360px;
+    gap: var(--space-2);
+    scroll-snap-type: x mandatory;
+  }
+
+  .crm-kanban > div {
+    min-width: 200px;
+    max-width: 200px;
+  }
+
+  .crm-detail-contact {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-detail-actions {
+    flex-direction: column;
+  }
+
+  .crm-detail-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .crm-kpis {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .crm-kanban > div {
+    min-width: 180px;
+    max-width: 180px;
+  }
+}
+
+/* =============================================
    MOBILE RESPONSIVE — Comprehensive
    ============================================= */
 
