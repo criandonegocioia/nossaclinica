@@ -65,8 +65,9 @@ export default function PhotoLightbox({ photos, currentIndex, onClose, onNavigat
       )}
 
       {/* Bottom info bar */}
-      {(photo.description || photo.date) && (
+      {(photo.category || photo.description || photo.date) && (
         <div className="lightbox-info">
+          {photo.category && <span className="lightbox-info-cat">{photo.category}</span>}
           {photo.description && <span className="lightbox-info-desc">{photo.description}</span>}
           {photo.date && <span className="lightbox-info-date">{photo.date}</span>}
         </div>

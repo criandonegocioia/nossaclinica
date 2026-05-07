@@ -94,15 +94,29 @@ function Gallery({ photos, onUpload }: { photos: Photo[]; onUpload: () => void }
   const [activeCat, setActiveCat] = useState<PhotoCategory | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  /* Build lightbox photos for active category */
-  const catPhotos = activeCat ? (grouped[activeCat] || []) : [];
-  const lightboxPhotos: LightboxPhoto[] = catPhotos.map((p) => ({
+  /* Build lightbox from ALL patient photos — enables cross-category navigation */
+  const allPhotos: LightboxPhoto[] = photos.map((p) => ({
     id: p.id,
     src: p.url || `${getApiBaseUrl()}/api/photos/${p.id}/content`,
     description: p.description,
     date: new Date(p.createdAt).toLocaleDateString('pt-BR'),
-    category: activeCat || undefined,
+    category: PHOTO_CATEGORIES[(p.category || 'OUTRO') as PhotoCategory]?.label || p.category,
   }));
+
+  /* Find global index from a photo in the active category */
+  const openLightbox = (photo: Photo) => {
+    const idx = photos.findIndex((p) => p.id === photo.id);
+    if (idx >= 0) setLightboxIndex(idx);
+  };
+
+  /* Open lightbox from category card preview (first photo in that category) */
+  const openCategoryPreview = (cat: PhotoCategory, e: React.MouseEvent) => {
+    const first = grouped[cat]?.[0];
+    if (first) { e.stopPropagation(); openLightbox(first); }
+    else setActiveCat(cat);
+  };
+
+  const catPhotos = activeCat ? (grouped[activeCat] || []) : [];
 
   return (
     <>
@@ -121,7 +135,10 @@ function Gallery({ photos, onUpload }: { photos: Photo[]; onUpload: () => void }
                 className="card"
                 style={{ cursor: 'pointer', animation: `fadeInUp 0.3s ease backwards ${i * 40}ms` }}
               >
-                <div style={{ height: 120, background: previewSrc ? `url(${previewSrc}) center/cover` : 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: 'var(--radius-2xl) var(--radius-2xl) 0 0' }}>
+                <div 
+                  onClick={count > 0 ? (e) => openCategoryPreview(cat, e) : undefined}
+                  style={{ height: 120, background: previewSrc ? `url(${previewSrc}) center/cover` : 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', borderRadius: 'var(--radius-2xl) var(--radius-2xl) 0 0', cursor: count > 0 ? 'zoom-in' : 'pointer' }}
+                >
                   {!previewSrc && <Camera size={32} style={{ color: 'var(--gray-300)' }} />}
                   {previewSrc && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.35), transparent)', borderRadius: 'var(--radius-2xl) var(--radius-2xl) 0 0' }} />}
                 </div>
@@ -155,7 +172,7 @@ function Gallery({ photos, onUpload }: { photos: Photo[]; onUpload: () => void }
             {catPhotos.map((p, i) => {
               const src = p.url || `${getApiBaseUrl()}/api/photos/${p.id}/content`;
               return (
-                <div key={p.id} onClick={() => setLightboxIndex(i)} style={{ position: 'relative', borderRadius: 'var(--radius-xl)', overflow: 'hidden', aspectRatio: '1', background: 'var(--gray-100)', cursor: 'zoom-in', boxShadow: 'var(--shadow-card)', transition: 'all 0.2s var(--ease-out)', animation: `fadeIn 0.3s ease backwards ${i * 40}ms` }}
+                <div key={p.id} onClick={() => openLightbox(p)} style={{ position: 'relative', borderRadius: 'var(--radius-xl)', overflow: 'hidden', aspectRatio: '1', background: 'var(--gray-100)', cursor: 'zoom-in', boxShadow: 'var(--shadow-card)', transition: 'all 0.2s var(--ease-out)', animation: `fadeIn 0.3s ease backwards ${i * 40}ms` }}
                   onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.03)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card-hover)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card)'; }}>
                   <img src={src} alt={p.description || p.category} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -174,10 +191,10 @@ function Gallery({ photos, onUpload }: { photos: Photo[]; onUpload: () => void }
         </div>
       )}
 
-      {/* Apple-style Lightbox with navigation */}
-      {lightboxIndex !== null && lightboxPhotos.length > 0 && (
+      {/* Apple-style Lightbox — navigates ALL patient photos cross-category */}
+      {lightboxIndex !== null && allPhotos.length > 0 && (
         <PhotoLightbox
-          photos={lightboxPhotos}
+          photos={allPhotos}
           currentIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
           onNavigate={setLightboxIndex}
